@@ -1,0 +1,6 @@
+#PyCharm
+.venv
+.idea
+
+#caches
+**/__pycache__
