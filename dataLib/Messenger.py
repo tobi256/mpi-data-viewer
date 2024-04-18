@@ -4,7 +4,7 @@ class Messenger:
 
     @staticmethod
     def __print(level: int, message: str) -> None:
-        if level > Messenger.min_level:
+        if level >= Messenger.min_level:
             print(f"{Messenger._level_names[level % len(Messenger._level_names)]}: {message}")
 
     @staticmethod

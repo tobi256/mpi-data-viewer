@@ -1,14 +1,18 @@
 from dataLib.Messenger import Messenger as m
-import dataLib.util as util
+from dataLib.TimingData import TimingData
+
 
 
 class DataManager:
     def __init__(self):
-        self.logs = {}
+        self.timings = {}
 
-    def read_timing(self, file_name: str, name: str = "hallo") -> None:
-        m.debug(f"{file_name}, {name}")
-        df = util.read_dat_file("../raw_time_data/allreduce_10/32_s1/1.dat")
-        print(df)
+    def read_timing(self, file_path: str, name: str = "hallo") -> None:
+        d = TimingData.create(file_path, name)
+        self.timings[name] = d
 
-
+    def get_timing_data(self, name: str) -> None | TimingData:
+        if name in self.timings.keys():
+            return self.timings[name]
+        m.warning("No Timing Data with that name: {name}")
+        return None
