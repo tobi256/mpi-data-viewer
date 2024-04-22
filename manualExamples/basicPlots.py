@@ -5,7 +5,7 @@ from dataLib import draw
 
 
 # set Messenger min print level (0 = debug)
-Messenger.Messenger.min_level = 0
+Messenger.Messenger.min_level = 1
 
 # create a Data Manager
 ds = dm.DataManager()
@@ -20,9 +20,10 @@ db.read_timing("../../raw_time_data/allreduce_10/32_32/1.dat", "test1")
 db.read_timing("../../raw_time_data/allreduce_10/32_32/2.dat", "test2")
 db.read_timing("../../raw_time_data/allreduce_10/32_32/3.dat", "test3")
 
-# draw figures
+# draw scatter plots
 fig = draw.gen_fig_scatter(ds.create_chunks())
 fig.show()
 
-fig = draw.gen_fig_scatter(db.create_chunks(idx_start=5), show_end=False)
-fig.show()
+draw.gen_fig_scatter(db.create_chunks(idx_start=0), show_end=False, show_mean=True).show()
+
+draw.gen_fig_scatter(db.get_timing_data("test3").create_chunk()).show()

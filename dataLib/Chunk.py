@@ -11,6 +11,7 @@ class Chunk:
         self.p_start = p_start
         self.p_end = p_end
         self.__data = None  # used only if chunk is standalone
+        self.__mean_times_by_idx = None
 
     def __del__(self):
         if self.__data is None:
@@ -30,5 +31,8 @@ class Chunk:
         self.__data = self.get_data().copy()
         self.td._deregister_locking_chunk(self)
 
-
+    def get_mean_times_by_idx(self):
+        if self.__mean_times_by_idx is None:
+            self.__mean_times_by_idx = self.get_data().groupby('idx').agg({'start': 'mean', 'end': 'mean'})
+        return self.__mean_times_by_idx
 
