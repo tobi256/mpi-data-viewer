@@ -8,7 +8,7 @@ class DataManager:
         self.timings = {}
 
     def read_timing(self, file_path: str, name: str = "hallo") -> None:
-        d = TimingData.create(file_path, name)
+        d = TimingData._create(file_path, name)
         self.timings[name] = d
 
     def get_timing_data(self, name: str) -> None | TimingData:

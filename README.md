@@ -4,10 +4,19 @@
 
 ### TimingData
 
-TimingData is a wrapper for an MPI performance log file. 
-It saves the meta information like the cores and nodes were used.
-It provides access to the whole dataset or subsets of it.
+TimingData is a wrapper for an MPI timestamp log file. 
+It saves the meta information like which cores and nodes were used.
+It provides access to the whole dataset or subsets (Chunks) of it.
 It may drop the Dataframe to free memory for other data. It can be instructed to load the data again.
+
+### Chunk
+
+A chunk is a subset of the data of a TimingData object.
+It is to be used, when specific parts of the file are needed.
+It references per default the data from a TimingData object, but may be instructed to make a local copy.
+If a copy is made, it acts as standalone and the data of the TimingData may be dropped.
+If not, the Chunk is registered in the TimingData object and blocks the dropping of the data.
+The `get_data` function of the Chunk object is therefore always safe to use. 
 
 ### DataManager
 

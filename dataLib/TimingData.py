@@ -1,6 +1,8 @@
 from datetime import datetime
 from typing import IO
 from dataLib.Messenger import Messenger as m
+
+
 import pandas as pd
 
 
@@ -28,7 +30,43 @@ class TimingData:
         self.__data = None
         self.__line_start = 0  # the first dataline which is loaded (if __data not None)
         self.__line_end = 0  # the last line +1 (like python [0:1024] -> line 0-1023 are loaded)
-        self.drop_locked = False  # if true, data can not be dropped # todo needs to be improved to references by chunks to enable multiple chunks to lock the data
+        self.drop_lock_registry = []  # if not empty, data must not be dropped
+
+    def _register_locking_chunk(self, item):
+        if item.td == self:
+            if item not in self.drop_lock_registry:
+                self.drop_lock_registry.append(item)
+                m.debug(f"TimingData {self.name} drop-registry count increased: {len(self.drop_lock_registry)}")
+        else:
+            m.error("Can not register Chunk")
+
+    def _deregister_locking_chunk(self, item):
+        if item not in self.drop_lock_registry:
+            m.warning("Chunk not registered in this TimingData")
+        else:
+            self.drop_lock_registry.remove(item)
+            m.debug(f"TimingData {self.name} drop-registry count decreased: {len(self.drop_lock_registry)}")
+
+    # both ends here are inclusive for idx and p. (p[0,0] -> only p = 0, idx[1,3] -> idx = 1,2,3)
+    def create_chunk(self, idx_start: int = 0, idx_end: int | None = None, p_start: int = 0, p_end: int | None = None, standalone: bool = False):
+        if idx_end is None:
+            idx_end = self.timestamps_n - 1
+        elif idx_end < 0:
+            idx_end += self.timestamps_n
+        if p_end is None:
+            p_end = self.procs_exec_n - 1  # todo think about what happens if sampled != exec
+        elif p_end < 0:
+            p_end += self.procs_exec_n
+
+        if idx_start < 0 or idx_end >= self.timestamps_n or p_start < 0 or p_end >= self.procs_exec_n:
+            m.error("Invalid index for chunk creation")
+            return None
+        c = Chunk(self, idx_start, idx_end, p_start, p_end)
+        self._load_range(idx_start, idx_end)
+        self._register_locking_chunk(c)
+        if standalone:
+            c.make_standalone()
+        return c
 
     def __idx_to_line(self, idx, start: bool):
         if idx < 0:
@@ -37,14 +75,14 @@ class TimingData:
 
     def __idxs_to_lines(self, idx_start, idx_end):
         if idx_end is None:
-            idx_end = self.timestamps_n
+            idx_end = self.timestamps_n - 1
         start = self.__idx_to_line(idx_start, True)
         end = self.__idx_to_line(idx_end, False)
         if start > end:
             m.critical(f"{self.name} invalid idx values")
         return start, end
 
-    def data_loaded(self, idx_start: int = 0, idx_end: int | None = None):
+    def _data_loaded(self, idx_start: int = 0, idx_end: int | None = None):
         start, end = self.__idxs_to_lines(idx_start, idx_end)
         return self.__data is not None and start >= self.__line_start and end <= self.__line_end
 
@@ -57,9 +95,9 @@ class TimingData:
             self.__data = None
             m.error(f"Error while reading file")
 
-    # loads idx range given, skips headers
-    def load_range(self, idx_start: int = 0, idx_end: int | None = None):
-        if not self.data_loaded(idx_start, idx_end):
+    # loads idx range given (both inclusive, end -1 is last element), skips headers
+    def _load_range(self, idx_start: int = 0, idx_end: int | None = None):
+        if not self._data_loaded(idx_start, idx_end):
             try:
                 with open(self.file_path, 'r') as file:
                     for line in file:
@@ -69,7 +107,7 @@ class TimingData:
                     start, end = self.__idxs_to_lines(idx_start, idx_end)
                     for x in range(0, start):
                         file.readline()
-                    m.info(f"TimingData {self.name} reading idx {idx_start}-{idx_end if idx_end is not None else "end"}. (lines [{start}:{end}])")
+                    m.info(f"TimingData {self.name} reading idx {idx_start} - {idx_end if idx_end is not None else "end"}. (lines [{start}:{end}])")
                     self.__read_data_stream(file, header, end-start)
                     self.__line_start = start
                     self.__line_end = end
@@ -78,16 +116,19 @@ class TimingData:
                 m.debug(f"File error: {e}")
 
     # loads data but skips the parameters on top of file
-    def load_all_data(self):
-        self.load_range()
+    def _load_all_data(self):
+        self._load_range()
 
-    def drop_data(self):
-        if not self.drop_locked:
+    def _drop_data(self):
+        if len(self.drop_lock_registry) == 0:
             m.info(f"TimingData {self.name} dropped its dataframe.")
             self.__data = None
 
+    def get_loaded_dataframe(self):
+        return self.__data
+
     def get_complete_raw_data_frame(self):
-        self.load_all_data()
+        self._load_all_data()
         return self.__data
 
     def temp_print_df(self):
@@ -95,7 +136,7 @@ class TimingData:
 
     # creates and returns a new TimingData object
     @staticmethod
-    def create(file_path: str, name: str | None = None, read_all: bool = False):
+    def _create(file_path: str, name: str | None = None, read_all: bool = False):
         args = {
             "time": None,
             "nprocs": None,
@@ -136,5 +177,5 @@ class TimingData:
         return None
 
 
-
-
+# import has to be at end to avoid circular import
+from dataLib.Chunk import Chunk

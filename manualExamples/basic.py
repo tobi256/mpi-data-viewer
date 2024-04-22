@@ -1,4 +1,5 @@
 from dataLib import DataManager as dm
+from dataLib import Chunk
 from dataLib import Messenger
 
 
@@ -16,11 +17,18 @@ data = d.get_timing_data("test")
 if data is None:
     print("no data")
 else:
-    #print(data.get_complete_raw_data_frame())
-    data.load_range(1, 1)
-    data.temp_print_df()
-    data.load_range(0, 3)
-    data.temp_print_df()
-    data.load_range(1, 1)
-    data.temp_print_df()
+    # create chunk containing only the first timestamp and only Processes 0 to 7
+    c1 = data.create_chunk(0, 0, 0, 7)
+    c1.make_standalone()  # keeps its on copy of the selected data, independent of TimingData object
+    print(c1.get_data())
+
+    # create chunk containing all data (needs to reload data)
+    c2 = data.create_chunk()
+    print(c2.get_data())
+
+    # create chunk containing all processes for timestamps 4 and 5 (no need to reload data)
+    c3 = data.create_chunk(4, 5)
+    print(c3.get_data())
+
+
 
