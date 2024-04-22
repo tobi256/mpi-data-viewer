@@ -16,5 +16,11 @@ data = d.get_timing_data("test")
 if data is None:
     print("no data")
 else:
-    print(data.get_raw_data_frame())
+    #print(data.get_complete_raw_data_frame())
+    data.load_range(1, 1)
+    data.temp_print_df()
+    data.load_range(0, 3)
+    data.temp_print_df()
+    data.load_range(1, 1)
+    data.temp_print_df()
 
