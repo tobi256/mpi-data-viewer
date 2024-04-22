@@ -17,6 +17,10 @@ class Chunk:
         if self.__data is None:
             self.td._deregister_locking_chunk(self)
 
+    # all values calculated on basis of __data are removed
+    def __reset_calcs(self):
+        self.__mean_times_by_idx = None
+
     def get_data(self) -> pd.DataFrame:
         if self.__data is not None:
             return self.__data
@@ -28,11 +32,27 @@ class Chunk:
             return df[(df['idx'].between(self.idx_start, self.idx_end)) & (df['p'].between(self.p_start, self.p_end))]
 
     def make_standalone(self):
-        self.__data = self.get_data().copy()
-        self.td._deregister_locking_chunk(self)
+        if self.__data is None:
+            self.__data = self.get_data().copy()
+            self.td._deregister_locking_chunk(self)
 
     def get_mean_times_by_idx(self):
         if self.__mean_times_by_idx is None:
             self.__mean_times_by_idx = self.get_data().groupby('idx').agg({'start': 'mean', 'end': 'mean'})
         return self.__mean_times_by_idx
 
+    # Refactors the time to start at zero. The earliest start time is used as zero, all values are linearly recalculated
+    def time_starts_zero_at_first(self):
+        self.make_standalone()
+        self.__reset_calcs()
+        mini = self.__data[self.__data["idx"] == self.idx_start]['start'].min()
+        self.__data[["start", "end"]] = self.__data[["start", "end"]].apply(lambda x: x - mini)
+
+
+class ChunkList(list):
+    def each_time_starts_zero_at_first(self):
+        for a in self:
+            a.time_starts_zero_at_first()
+
+    def __getitem__(self, index):
+        return super().__getitem__(index)

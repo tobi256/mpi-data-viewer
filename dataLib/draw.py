@@ -1,5 +1,5 @@
-from dataLib import Chunk
-from typing import Sequence
+from dataLib.Chunk import Chunk
+from dataLib.Chunk import ChunkList
 import plotly.graph_objects as go
 import plotly.express as px
 
@@ -12,13 +12,13 @@ def _gen_full_hover_text(row):
 
 
 def gen_fig_scatter(
-        data: Sequence[Chunk] | Chunk,  # data to plot
+        data: ChunkList | Chunk,  # data to plot
         show_start: bool = True,  # shows start timestamps if true
         show_end: bool = True,  # shows end timestamps if true
         show_mean: bool = False  # vertical lines for mean of each idx of each chunk
 ):
-    if type(data) not in [list, tuple]:
-        data = [data]
+    if type(data) is not ChunkList:
+        data = ChunkList([data])
 
     fig = go.Figure(layout=dict(height=800))
 
