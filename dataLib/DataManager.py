@@ -1,6 +1,6 @@
 from dataLib.Messenger import Messenger as m
 from dataLib.TimingData import TimingData
-
+from typing import List
 
 
 class DataManager:
@@ -16,3 +16,16 @@ class DataManager:
             return self.timings[name]
         m.warning("No Timing Data with that name: {name}")
         return None
+
+    def create_chunks(self, names: None | List[str] = None, idx_start: int = 0, idx_end: int | None = None, p_start: int = 0, p_end: int | None = None, standalone: bool = False):
+        if names is None:
+            names = self.timings.keys()
+
+        # todo add warnings, if data does not match
+        res = []
+        for x in names:
+            res.append(self.timings[x].create_chunk(idx_start, idx_end, p_start, p_end, standalone))
+
+        return res
+
+

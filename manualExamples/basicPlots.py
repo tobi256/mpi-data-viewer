@@ -8,16 +8,21 @@ from dataLib import draw
 Messenger.Messenger.min_level = 0
 
 # create a Data Manager
-d = dm.DataManager()
+ds = dm.DataManager()
+db = dm.DataManager()
 
 # load Files
-d.read_timing("../../raw_time_data/allreduce_10/32_1/1.dat", "test1")
-d.read_timing("../../raw_time_data/allreduce_10/32_1/2.dat", "test2")
-d.read_timing("../../raw_time_data/allreduce_10/32_1/3.dat", "test3")
+ds.read_timing("../../raw_time_data/allreduce_10/32_1/1.dat", "test1")
+ds.read_timing("../../raw_time_data/allreduce_10/32_1/2.dat", "test2")
+ds.read_timing("../../raw_time_data/allreduce_10/32_1/3.dat", "test3")
 
-c1 = d.get_timing_data("test1").create_chunk()
-c2 = d.get_timing_data("test2").create_chunk()
-c3 = d.get_timing_data("test3").create_chunk()
+db.read_timing("../../raw_time_data/allreduce_10/32_32/1.dat", "test1")
+db.read_timing("../../raw_time_data/allreduce_10/32_32/2.dat", "test2")
+db.read_timing("../../raw_time_data/allreduce_10/32_32/3.dat", "test3")
 
-fig = draw.gen_fig_scatter([c1, c2, c3])
+# draw figures
+fig = draw.gen_fig_scatter(ds.create_chunks())
+fig.show()
+
+fig = draw.gen_fig_scatter(db.create_chunks(idx_start=5), show_end=False)
 fig.show()
