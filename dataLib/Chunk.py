@@ -39,6 +39,7 @@ class Chunk:
     def get_mean_times_by_idx(self):
         if self.__mean_times_by_idx is None:
             self.__mean_times_by_idx = self.get_data().groupby('idx').agg({'start': 'mean', 'end': 'mean'})
+            self.__mean_times_by_idx.rename(columns={'start': 'm_start', 'end': 'm_end'}, inplace=True)
         return self.__mean_times_by_idx
 
     # Refactors the time to start at zero. The earliest start time is used as zero, all values are linearly recalculated
