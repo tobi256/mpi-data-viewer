@@ -56,4 +56,14 @@ class ChunkList(list):
             a.time_starts_zero_at_first()
 
     def __getitem__(self, index):
-        return super().__getitem__(index)
+        if isinstance(index, slice):
+            start = index.start if index.start is not None else 0
+            stop = index.stop if index.stop is not None else len(self)
+            step = index.step if index.step is not None else 1
+
+            sliced_chunk_list = ChunkList()
+            for i in range(start, stop, step):
+                sliced_chunk_list.append(self[i])
+            return sliced_chunk_list
+        else:
+            return super().__getitem__(index)

@@ -6,12 +6,9 @@ from enum import Enum
 import pandas as pd
 
 
-_colors = px.colors.qualitative.G10
-
-
-class RunOrOperation(Enum):
-    run = 1
-    operation = 2
+_colors = px.colors.qualitative.G10  # todo add bigger color pallet
+_colors.extend(px.colors.qualitative.G10)
+_colors.extend(px.colors.qualitative.G10)
 
 def _gen_full_hover_text(row):
     return f"p: {row['p']}\ni: {row['idx']}\nstart: {row['start']}\nend: {row['end']}"
