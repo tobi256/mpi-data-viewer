@@ -15,4 +15,6 @@ db.read_timing_folder("/Users/tobi/projects/bach/raw_time_data/new_comp/allreduc
 
 cl = db.create_chunks()
 cl.each_time_starts_zero_at_first()
-draw.gen_fig_scatter(cl[0:4], show_end=False).show()
+#draw.gen_fig_scatter(cl[0:4], show_end=False, show_mean=True).show()
+#draw.gen_fig_scatter(cl, show_end=False, show_mean=True).show()
+draw.gen_fig_diff_timing(cl[0], cl[1], show_points=False).show()
