@@ -42,18 +42,36 @@ class Chunk:
             self.__mean_times_by_idx.rename(columns={'start': 'm_start', 'end': 'm_end'}, inplace=True)
         return self.__mean_times_by_idx
 
-    # Refactors the time to start at zero. The earliest start time is used as zero, all values are linearly recalculated
-    def time_starts_zero_at_first(self):
+    # Updates the timestamps without changing the relative difference between the timestamps.
+    # Now the first Timestamp is at exactly zero.
+    def time_starts_zero_at_first_value(self):
         self.make_standalone()
         self.__reset_calcs()
         mini = self.__data[self.__data["idx"] == self.idx_start]['start'].min()
         self.__data[["start", "end"]] = self.__data[["start", "end"]].apply(lambda x: x - mini)
+        return self
+
+    # Updates the timestamps without changing the relative difference between the timestamps.
+    # Now the first average of the given chunk starts at zero
+    def time_starts_zero_at_first_mean(self):
+        self.make_standalone()
+        means = self.get_mean_times_by_idx()
+        mini = means.loc[self.idx_start, "m_start"]
+        self.__data[["start", "end"]] = self.__data[["start", "end"]].apply(lambda x: x - mini)
+        self.__reset_calcs()
+        return self
 
 
 class ChunkList(list):
-    def each_time_starts_zero_at_first(self):
+    def each_time_starts_zero_at_first_value(self):
         for a in self:
-            a.time_starts_zero_at_first()
+            a.time_starts_zero_at_first_value()
+        return self
+
+    def each_time_starts_zero_at_first_mean(self):
+        for a in self:
+            a.time_starts_zero_at_first_mean()
+        return self
 
     def __getitem__(self, index):
         if isinstance(index, slice):
