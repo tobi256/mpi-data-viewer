@@ -1,3 +1,5 @@
+import warnings
+warnings.simplefilter(action='ignore', category=FutureWarning)
 from dataLib.TimingData import TimingData
 from dataLib.Messenger import Messenger as m
 from enum import Flag
@@ -104,6 +106,7 @@ class Chunk:
             additional_selection: Filter = 0,
             filter_start: bool = True,
             filter_end: bool = True,
+            remove_duplicates: bool = True,
             keep_selection_and_drop_unselected: bool = True):
         """
         :param entity_selection_lambda: lambda function which can decide which entities shall be selected
@@ -114,6 +117,7 @@ class Chunk:
             results might differ from the same calculations on the original data.
         :param filter_end: if true, the end-values will be filtered
         :param filter_start: if true, the start-values will be filtered
+        :param remove_duplicates: in case of multiple min/max values, only one will be chosen.
         :param keep_selection_and_drop_unselected: if True, selected entities will be kept, otherwise dismissed
             only applies to selection list and lambda, additional selection will always be shown and never dismissed
         :return: None
@@ -138,18 +142,24 @@ class Chunk:
             return
 
         if filter_start:
-            self.__filter_entities_helper(whitelist, lam_func, additional_selection, keep_selection_and_drop_unselected, True)
+            self.__filter_entities_helper(whitelist, lam_func, additional_selection, remove_duplicates,
+                                          keep_selection_and_drop_unselected, True)
         if filter_end:
-            self.__filter_entities_helper(whitelist, lam_func, additional_selection, keep_selection_and_drop_unselected, False)
+            self.__filter_entities_helper(whitelist, lam_func, additional_selection, remove_duplicates,
+                                          keep_selection_and_drop_unselected, False)
+        m.debug("filtering done")
         return
 
-    def __filter_entities_helper(self, whitelist, lam_func, additional, keep, filter_start):
+    def __filter_entities_helper(self, whitelist, lam_func, additional, remove_duplicates, keep, filter_start):
         key = ("start" if filter_start else "end")
         uf = self.get_data()
         filtered = uf[uf["is_start"] == (not filter_start)].copy()
         uf = uf[(uf["is_start"] == filter_start)]
+        idxes = uf["idx"].unique()
 
+        #  first: median, min, max, first, last
         filter_opts = [
+            dict(filter=Filter.MEDIAN, agg_key=key, agg_oper="median", filter_name="median"),
             dict(filter=Filter.MIN, agg_key=key, agg_oper="min", filter_name="min"),
             dict(filter=Filter.MAX, agg_key=key, agg_oper="max", filter_name="max"),
             dict(filter=Filter.FIRST, agg_key="p", agg_oper="min", filter_name="first"),
@@ -157,14 +167,39 @@ class Chunk:
         ]
         for x in filter_opts:
             if additional & x["filter"]:
-                aggr = uf.groupby(['idx']).agg({x["agg_key"]: x["agg_oper"]})
+                aggr = uf.groupby(['idx']).agg({x["agg_key"]: x["agg_oper"]}).reset_index()
+                if x["filter"] == Filter.MEDIAN:
+                    # special median calcs
+                    median_aggr = pd.DataFrame(columns=aggr.columns)
+                    for y in idxes:
+                        con = uf[(uf["idx"] == y) & (uf[x["agg_key"]] == aggr[aggr["idx"] == y][x["agg_key"]].values[0])][["idx", x["agg_key"]]].reset_index()
+                        if len(con) == 0:
+                            # no exact median found, need to take 2 border elements
+                            smaller = uf[
+                                (uf["idx"] == y) & (uf[x["agg_key"]] < aggr[aggr['idx'] == y][x["agg_key"]].values[0])
+                                ][x["agg_key"]].max()
+                            larger = uf[
+                                (uf["idx"] == y) & (uf[x["agg_key"]] > aggr[aggr['idx'] == y][x["agg_key"]].values[0])
+                                ][x["agg_key"]].min()
+                            median_aggr = pd.concat([median_aggr, pd.DataFrame([y, smaller], columns=median_aggr.columns)])
+                            median_aggr = pd.concat([median_aggr, pd.DataFrame([y, larger], columns=median_aggr.columns)])
+                        else:
+                            median_aggr = pd.concat([con, median_aggr])
+                    aggr = median_aggr
                 temp = pd.merge(aggr, uf, on=["idx", x["agg_key"]])
-                temp = temp.drop_duplicates(subset=["idx", x["agg_key"]])
+                if remove_duplicates:
+                    temp = temp.drop_duplicates(subset=["idx", x["agg_key"]])
+                remove = temp[["idx", "p"]]
                 temp["context"] += f"f{self.__operation_counter}:{x['filter_name']} "
-                uf = uf.merge(aggr, on=["idx", x["agg_key"]], how="left", indicator=True)
+                print(f"before:{len(uf)}")
+                uf = uf.merge(remove, on=["idx", "p"], how="left", indicator=True)
                 uf = uf[uf["_merge"] == "left_only"].drop(columns="_merge")
+                print(f"after:{len(uf)}")
                 filtered = pd.concat([filtered, temp])
 
+        # third: list
+
+        # fourth: lambda
         self.__data = filtered
 
 
