@@ -7,6 +7,9 @@ from types import FunctionType
 
 
 # If there is no singular Median, two points will be selected.
+# note: using first and last in combination with other parameters may lead to errors.
+#    Points will not be duplicated, and max, min and median are prioritized.
+#    If point is first and min, it will be displayed as min.
 class Filter(Flag):
     FIRST =     0b0000_0001  # entity with the lowest id in the set
     LAST =      0b0000_0010  # entity with the highest id in the set
@@ -14,6 +17,7 @@ class Filter(Flag):
     MAX =       0b0000_1000  # entity with the highest value in the set
     MEDIAN =    0b0001_0000  # median of value-set, or 2 values which would be used to calculate median
     MIN_MAX_MED = MIN | MAX | MEDIAN
+    ALL =       0b1111_1111  # todo remove
 
 
 class Chunk:
@@ -26,6 +30,7 @@ class Chunk:
         self.__raw_data = None  # used only if chunk is standalone
         self.__data = None  # contains a copy of the data which may be filtered or grouped by user
         self.__mean_times_by_idx = None
+        self.__operation_counter = 0  # counts the amount of filter and group operations on the chunk
 
     def __del__(self):
         if self.__raw_data is None:
@@ -110,6 +115,7 @@ class Chunk:
         :param filter_end: if true, the end-values will be filtered
         :param filter_start: if true, the start-values will be filtered
         :param keep_selection_and_drop_unselected: if True, selected entities will be kept, otherwise dismissed
+            only applies to selection list and lambda, additional selection will always be shown and never dismissed
         :return: None
         """
         whitelist = None
@@ -142,35 +148,23 @@ class Chunk:
         uf = self.get_data()
         filtered = uf[uf["is_start"] == (not filter_start)].copy()
         uf = uf[(uf["is_start"] == filter_start)]
-        idxs = uf["idx"].unique()
-        print(idxs)
-        if additional & Filter.FIRST:
-            aggr = uf.groupby(['idx']).agg({'p': 'min'})
-            temp = pd.merge(aggr, uf, left_on=["idx", "p"], right_on=["idx", "p"])
-            temp["context"] += "f1:first "  # todo add action counter
-            filtered = pd.concat([filtered, temp])
 
+        filter_opts = [
+            dict(filter=Filter.MIN, agg_key=key, agg_oper="min", filter_name="min"),
+            dict(filter=Filter.MAX, agg_key=key, agg_oper="max", filter_name="max"),
+            dict(filter=Filter.FIRST, agg_key="p", agg_oper="min", filter_name="first"),
+            dict(filter=Filter.LAST, agg_key="p", agg_oper="max", filter_name="last"),
+        ]
+        for x in filter_opts:
+            if additional & x["filter"]:
+                aggr = uf.groupby(['idx']).agg({x["agg_key"]: x["agg_oper"]})
+                temp = pd.merge(aggr, uf, on=["idx", x["agg_key"]])
+                temp = temp.drop_duplicates(subset=["idx", x["agg_key"]])
+                temp["context"] += f"f{self.__operation_counter}:{x['filter_name']} "
+                uf = uf.merge(aggr, on=["idx", x["agg_key"]], how="left", indicator=True)
+                uf = uf[uf["_merge"] == "left_only"].drop(columns="_merge")
+                filtered = pd.concat([filtered, temp])
 
-        self.__data = filtered
-        return
-        for index in idxs:
-            sub = uf[(uf["is_start"] == filter_start) & (uf["idx"] == index)]
-            already_added = []
-            if additional & Filter.FIRST:
-                first_ent = sub["p"].min()
-                temp = sub.loc[sub["p"] == first_ent]
-                print(temp)
-                print(temp[0])
-                #temp = sub[sub["p"] == first_ent].copy()
-                #temp["context"] += "f1:first " #todo add action counter
-                #filtered = filtered.append(temp, ignore_index=True)
-                #already_added.append(first_ent)
-            if additional & Filter.LAST:
-                last_ent = sub["p"].max()
-                temp = sub[sub["p"] == last_ent].copy()
-                temp["context"] += "f1:last "
-                filtered = filtered.append(temp, ignore_index=True)
-                already_added.append(last_ent)
         self.__data = filtered
 
 
