@@ -172,7 +172,7 @@ class Chunk:
                     # special median calcs
                     median_aggr = pd.DataFrame(columns=aggr.columns)
                     for y in idxes:
-                        con = uf[(uf["idx"] == y) & (uf[x["agg_key"]] == aggr[aggr["idx"] == y][x["agg_key"]].values[0])][["idx", x["agg_key"]]].reset_index()
+                        con = uf[(uf["idx"] == y) & (uf[x["agg_key"]] == aggr[aggr["idx"] == y][x["agg_key"]].values[0])][["idx", x["agg_key"]]].drop_duplicates()
                         if len(con) == 0:
                             # no exact median found, need to take 2 border elements
                             smaller = uf[
@@ -185,16 +185,17 @@ class Chunk:
                             median_aggr = pd.concat([median_aggr, pd.DataFrame([y, larger], columns=median_aggr.columns)])
                         else:
                             median_aggr = pd.concat([con, median_aggr])
+                            #print(median_aggr)
                     aggr = median_aggr
                 temp = pd.merge(aggr, uf, on=["idx", x["agg_key"]])
                 if remove_duplicates:
                     temp = temp.drop_duplicates(subset=["idx", x["agg_key"]])
                 remove = temp[["idx", "p"]]
                 temp["context"] += f"f{self.__operation_counter}:{x['filter_name']} "
-                print(f"before:{len(uf)}")
+                #print(f"before:{len(uf)}")
                 uf = uf.merge(remove, on=["idx", "p"], how="left", indicator=True)
                 uf = uf[uf["_merge"] == "left_only"].drop(columns="_merge")
-                print(f"after:{len(uf)}")
+                #print(f"after:{len(uf)}")
                 filtered = pd.concat([filtered, temp])
 
         # third: list

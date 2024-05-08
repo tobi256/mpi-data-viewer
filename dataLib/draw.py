@@ -1,9 +1,12 @@
+import time
+
 from dataLib.Chunk import Chunk
 from dataLib.Chunk import ChunkList
 import plotly.graph_objects as go
 import plotly.express as px
 from enum import Enum
 import pandas as pd
+from datetime import datetime
 
 
 _colors = px.colors.qualitative.G10  # todo add bigger color pallet
