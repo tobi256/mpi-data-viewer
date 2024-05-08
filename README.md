@@ -17,6 +17,12 @@ It references per default the data from a TimingData object, but may be instruct
 If a copy is made, it acts as standalone and the data of the TimingData may be dropped.
 If not, the Chunk is registered in the TimingData object and blocks the dropping of the data.
 The `get_data` function of the Chunk object is therefore always safe to use. 
+A Chunk object works with the data which was specified at creation. 
+If not all entities were selected, the mean will only be applied to the selected entities, which may result in
+unexpected results. To keep data-consistency, select the whole range of entities and use the filter functionality of the
+Chunk to cut down the display size. Filter and Group functionality of the Chunk change only what is displayed, but 
+use the real full dataset in the background. Keep in mind that using functions which truly change the data of the Chunk,
+like `time_starts_zero_at_first_value`, will change the underlying data and then recalculate the filters and groupings.
 
 ### DataManager
 

@@ -10,9 +10,47 @@ _colors = px.colors.qualitative.G10  # todo add bigger color pallet
 _colors.extend(px.colors.qualitative.G10)
 _colors.extend(px.colors.qualitative.G10)
 
+# todo refactor everything to use new get_data
+# todo add js switch to disable mean visible
+# todo add scatter "run view" or create new scatter plot for this
+# todo add background boxes for
+
 def _gen_full_hover_text(row):
     return f"p: {row['p']}\ni: {row['idx']}\nstart: {row['start']}\nend: {row['end']}"
 
+
+def test_gen_fig_scatter(
+        data: ChunkList | Chunk,  # data to plot
+        show_start: bool = True,  # shows start timestamps if true
+        show_end: bool = True,  # shows end timestamps if true
+        show_mean: bool = False  # vertical lines for mean of each idx of each chunk
+):
+    if type(data) is not ChunkList:
+        data = ChunkList([data])
+
+    fig = go.Figure()
+
+    index = 0
+    for frame in data:
+        fd = frame.get_data()
+        desc = fd.apply(_gen_full_hover_text, axis=1)
+        if show_start:
+            fig.add_scattergl(x=fd[fd['is_start']]['start'], y=fd[fd['is_start']]['p'], name=f"{frame.td.name}: start", mode='markers',
+                            marker=dict(color=_colors[index]), hovertext=desc)
+            if show_mean:
+                for i, x in frame.get_mean_times_by_idx().iterrows():
+                    fig.add_vline(x['m_start'], line_color=_colors[index])
+            index += 1
+        if show_end:
+            fig.add_scattergl(x=fd[fd['is_start'] == False]['end'], y=fd[fd['is_start'] == False]['p'], name=f"{frame.td.name}: end", mode='markers',
+                            marker=dict(color=_colors[index]), hovertext=desc)
+            if show_mean:
+                for i, x in frame.get_mean_times_by_idx().iterrows():
+                    fig.add_vline(x['m_end'], line_color=_colors[index])
+            index += 1
+    fig.update_xaxes(title="time")
+    fig.update_yaxes(title="Entity ID")
+    return fig
 
 def gen_fig_scatter(
         data: ChunkList | Chunk,  # data to plot
@@ -27,7 +65,7 @@ def gen_fig_scatter(
 
     index = 0
     for frame in data:
-        fd = frame.get_data()
+        fd = frame.get_raw_data()
         desc = fd.apply(_gen_full_hover_text, axis=1)
         if show_start:
             fig.add_scattergl(x=fd['start'], y=fd['p'], name=f"{frame.td.name}: start", mode='markers',

@@ -1,6 +1,19 @@
 from dataLib.TimingData import TimingData
 from dataLib.Messenger import Messenger as m
+from enum import Flag
+from typing import Callable
 import pandas as pd
+from types import FunctionType
+
+
+# If there is no singular Median, two points will be selected.
+class Filter(Flag):
+    FIRST =     0b0000_0001  # entity with the lowest id in the set
+    LAST =      0b0000_0010  # entity with the highest id in the set
+    MIN =       0b0000_0100  # entity with the lowest value in the set
+    MAX =       0b0000_1000  # entity with the highest value in the set
+    MEDIAN =    0b0001_0000  # median of value-set, or 2 values which would be used to calculate median
+    MIN_MAX_MED = MIN | MAX | MEDIAN
 
 
 class Chunk:
@@ -10,20 +23,22 @@ class Chunk:
         self.idx_end = idx_end
         self.p_start = p_start
         self.p_end = p_end
-        self.__data = None  # used only if chunk is standalone
+        self.__raw_data = None  # used only if chunk is standalone
+        self.__data = None  # contains a copy of the data which may be filtered or grouped by user
         self.__mean_times_by_idx = None
 
     def __del__(self):
-        if self.__data is None:
+        if self.__raw_data is None:
             self.td._deregister_locking_chunk(self)
 
     # all values calculated on basis of __data are removed
     def __reset_calcs(self):
         self.__mean_times_by_idx = None
+        self.__data = None  #todo add recalculation to get data, to maintain consistency for filtered and grouped data
 
-    def get_data(self) -> pd.DataFrame:
-        if self.__data is not None:
-            return self.__data
+    def get_raw_data(self) -> pd.DataFrame:
+        if self.__raw_data is not None:
+            return self.__raw_data
         else:
             df = self.td.get_loaded_dataframe()
             if df is None:
@@ -31,14 +46,28 @@ class Chunk:
                 m.critical("Chunk trying to access data which was dropped")
             return df[(df['idx'].between(self.idx_start, self.idx_end)) & (df['p'].between(self.p_start, self.p_end))]
 
+    def get_data(self) -> pd.DataFrame:
+        if self.__data is not None:
+            return self.__data
+        start = self.get_raw_data().copy()
+        start['is_start'] = True
+        start['context'] = ""
+
+        end = self.get_raw_data().copy()
+        end['is_start'] = False
+        end['context'] = ""
+
+        self.__data = pd.concat([start, end])
+        return self.__data
+
     def make_standalone(self):
-        if self.__data is None:
-            self.__data = self.get_data().copy()
+        if self.__raw_data is None:
+            self.__raw_data = self.get_raw_data().copy()
             self.td._deregister_locking_chunk(self)
 
     def get_mean_times_by_idx(self):
         if self.__mean_times_by_idx is None:
-            self.__mean_times_by_idx = self.get_data().groupby('idx').agg({'start': 'mean', 'end': 'mean'})
+            self.__mean_times_by_idx = self.get_raw_data().groupby('idx').agg({'start': 'mean', 'end': 'mean'})
             self.__mean_times_by_idx.rename(columns={'start': 'm_start', 'end': 'm_end'}, inplace=True)
         return self.__mean_times_by_idx
 
@@ -47,8 +76,8 @@ class Chunk:
     def time_starts_zero_at_first_value(self):
         self.make_standalone()
         self.__reset_calcs()
-        mini = self.__data[self.__data["idx"] == self.idx_start]['start'].min()
-        self.__data[["start", "end"]] = self.__data[["start", "end"]].apply(lambda x: x - mini)
+        mini = self.__raw_data[self.__raw_data["idx"] == self.idx_start]['start'].min()
+        self.__raw_data[["start", "end"]] = self.__raw_data[["start", "end"]].apply(lambda x: x - mini)
         return self
 
     # Updates the timestamps without changing the relative difference between the timestamps.
@@ -57,9 +86,93 @@ class Chunk:
         self.make_standalone()
         means = self.get_mean_times_by_idx()
         mini = means.loc[self.idx_start, "m_start"]
-        self.__data[["start", "end"]] = self.__data[["start", "end"]].apply(lambda x: x - mini)
+        self.__raw_data[["start", "end"]] = self.__raw_data[["start", "end"]].apply(lambda x: x - mini)
         self.__reset_calcs()
         return self
+
+    # Filters the data, so only the selected datapoints will be shown. Calculations which require all data, like the
+    #  mean of an idx will still be calculated over all data to avoid wrong data.
+    def filter_entities(
+            self,
+            entity_selection_list: list[int] | None = None,
+            entity_selection_lambda: Callable[[int], bool] | None = None,
+            additional_selection: Filter = 0,
+            filter_start: bool = True,
+            filter_end: bool = True,
+            keep_selection_and_drop_unselected: bool = True):
+        """
+        :param entity_selection_lambda: lambda function which can decide which entities shall be selected
+            lambda functions receives the entity id for each entity and returns a boolean.
+        :param entity_selection_list: list of entities which shall be selected.
+        :param additional_selection: Contains a selection of entities which will additionally be used
+            additional selection will be executed on the current dataset. if it was previously already filtered, the
+            results might differ from the same calculations on the original data.
+        :param filter_end: if true, the end-values will be filtered
+        :param filter_start: if true, the start-values will be filtered
+        :param keep_selection_and_drop_unselected: if True, selected entities will be kept, otherwise dismissed
+        :return: None
+        """
+        whitelist = None
+        lam_func = None
+        if type(entity_selection_list) is list:  #todo check if these typeofs work
+            whitelist = entity_selection_list
+        elif entity_selection_list is not None:
+            m.warning("Invalid entity_selector_list, could not filter")
+            return
+
+        if type(entity_selection_lambda) is FunctionType:
+            lam_func = entity_selection_lambda
+        elif entity_selection_lambda is not None:
+            m.warning("Invalid entity_selector_lambda, could not filter")
+            return
+
+        if ((whitelist is None and lam_func is None and additional_selection == 0)
+                or (not filter_start and not filter_end)):
+            m.info("Nothing to filter")
+            return
+
+        if filter_start:
+            self.__filter_entities_helper(whitelist, lam_func, additional_selection, keep_selection_and_drop_unselected, True)
+        if filter_end:
+            self.__filter_entities_helper(whitelist, lam_func, additional_selection, keep_selection_and_drop_unselected, False)
+        return
+
+    def __filter_entities_helper(self, whitelist, lam_func, additional, keep, filter_start):
+        key = ("start" if filter_start else "end")
+        uf = self.get_data()
+        filtered = uf[uf["is_start"] == (not filter_start)].copy()
+        uf = uf[(uf["is_start"] == filter_start)]
+        idxs = uf["idx"].unique()
+        print(idxs)
+        if additional & Filter.FIRST:
+            aggr = uf.groupby(['idx']).agg({'p': 'min'})
+            temp = pd.merge(aggr, uf, left_on=["idx", "p"], right_on=["idx", "p"])
+            temp["context"] += "f1:first "  # todo add action counter
+            filtered = pd.concat([filtered, temp])
+
+
+        self.__data = filtered
+        return
+        for index in idxs:
+            sub = uf[(uf["is_start"] == filter_start) & (uf["idx"] == index)]
+            already_added = []
+            if additional & Filter.FIRST:
+                first_ent = sub["p"].min()
+                temp = sub.loc[sub["p"] == first_ent]
+                print(temp)
+                print(temp[0])
+                #temp = sub[sub["p"] == first_ent].copy()
+                #temp["context"] += "f1:first " #todo add action counter
+                #filtered = filtered.append(temp, ignore_index=True)
+                #already_added.append(first_ent)
+            if additional & Filter.LAST:
+                last_ent = sub["p"].max()
+                temp = sub[sub["p"] == last_ent].copy()
+                temp["context"] += "f1:last "
+                filtered = filtered.append(temp, ignore_index=True)
+                already_added.append(last_ent)
+        self.__data = filtered
+
 
 
 class ChunkList(list):
