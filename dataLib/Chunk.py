@@ -13,6 +13,7 @@ from types import FunctionType
 #    Points will not be duplicated, and max, min and median are prioritized.
 #    If point is first and min, it will be displayed as min.
 class Filter(Flag):
+    NOTHING = 0  # will be overwritten if used in combination with something else
     FIRST =     0b0000_0001  # entity with the lowest id in the set
     LAST =      0b0000_0010  # entity with the highest id in the set
     MIN =       0b0000_0100  # entity with the lowest value in the set
@@ -32,6 +33,8 @@ class Chunk:
         self.__raw_data = None  # used only if chunk is standalone
         self.__data = None  # contains a copy of the data which may be filtered or grouped by user
         self.__mean_times_by_idx = None
+        self.__min_times_by_idx = None
+        self.__max_times_by_idx = None
         self.__operation_counter = 0  # counts the amount of filter and group operations on the chunk
 
     def __del__(self):
@@ -41,6 +44,8 @@ class Chunk:
     # all values calculated on basis of __data are removed
     def __reset_calcs(self):
         self.__mean_times_by_idx = None
+        self.__max_times_by_idx = None
+        self.__min_times_by_idx = None
         self.__data = None  #todo add recalculation to get data, to maintain consistency for filtered and grouped data
 
     def get_raw_data(self) -> pd.DataFrame:
@@ -78,6 +83,18 @@ class Chunk:
             self.__mean_times_by_idx.rename(columns={'start': 'm_start', 'end': 'm_end'}, inplace=True)
         return self.__mean_times_by_idx
 
+    def get_min_times_by_idx(self):
+        if self.__min_times_by_idx is None:
+            self.__min_times_by_idx = self.get_raw_data().groupby('idx').agg({'start': 'min', 'end': 'min'})
+            self.__min_times_by_idx.rename(columns={'start': 'm_start', 'end': 'm_end'}, inplace=True)
+        return self.__min_times_by_idx
+
+    def get_max_times_by_idx(self):
+        if self.__max_times_by_idx is None:
+            self.__max_times_by_idx = self.get_raw_data().groupby('idx').agg({'start': 'max', 'end': 'max'})
+            self.__max_times_by_idx.rename(columns={'start': 'm_start', 'end': 'm_end'}, inplace=True)
+        return self.__max_times_by_idx
+
     # Updates the timestamps without changing the relative difference between the timestamps.
     # Now the first Timestamp is at exactly zero.
     def time_starts_zero_at_first_value(self):
@@ -103,7 +120,7 @@ class Chunk:
             self,
             entity_selection_list: list[int] | None = None,
             entity_selection_lambda: Callable[[int], bool] | None = None,
-            additional_selection: Filter = 0,
+            additional_selection: Filter = Filter.NOTHING,
             filter_start: bool = True,
             filter_end: bool = True,
             remove_duplicates: bool = True,
@@ -200,23 +217,26 @@ class Chunk:
                 filtered = pd.concat([filtered, temp])
 
         # second: list
-        selector = uf["p"].isin(whitelist)
-        if not keep:
-            selector = ~selector
-        temp = uf[selector].copy()
-        remove = temp[["idx", "p"]]
-        temp["context"] += f"f{self.__operation_counter}:wl "
-        uf = uf.merge(remove, on=["idx", "p"], how="left", indicator=True)
-        uf = uf[uf["_merge"] == "left_only"].drop(columns="_merge")
-        filtered = pd.concat([filtered, temp])
+        if whitelist is not None:
+            selector = uf["p"].isin(whitelist)
+            if not keep:
+                selector = ~selector
+            temp = uf[selector].copy()
+            remove = temp[["idx", "p"]]
+            temp["context"] += f"f{self.__operation_counter}:wl "
+            uf = uf.merge(remove, on=["idx", "p"], how="left", indicator=True)
+            uf = uf[uf["_merge"] == "left_only"].drop(columns="_merge")
+            filtered = pd.concat([filtered, temp])
 
         # third: lambda
-        selector = uf["p"].apply(lam_func)
-        if not keep:
-            selector = ~selector
-        temp = uf[selector].copy()
-        temp["context"] += f"f{self.__operation_counter}:func "
-        filtered = pd.concat([filtered, temp])
+        if lam_func is not None:
+            selector = uf["p"].apply(lam_func)
+            if not keep:
+                selector = ~selector
+            temp = uf[selector].copy()
+            temp["context"] += f"f{self.__operation_counter}:func "
+            filtered = pd.concat([filtered, temp])
+
         self.__data = filtered
         return
 

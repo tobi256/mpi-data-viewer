@@ -1,5 +1,4 @@
-import time
-
+from pandas.core.common import flatten
 from dataLib.Chunk import Chunk
 from dataLib.Chunk import ChunkList
 import plotly.graph_objects as go
@@ -26,37 +25,75 @@ def _gen_full_hover_text(row):
     return f"p: {row['p']}\ni: {row['idx']}\nstart: {row['start']}\nend: {row['end']}"
 
 
+class DisplayStyle(Enum):
+    # Displays all runs in the same area.
+    # x = time
+    # y = entities
+    CLASSIC = 1
+
+    # Displays every run on its own line. All entities of run 1 are y=1 ...
+    # x = time
+    # y = runs on integers
+    RUN_LINE = 2
+
+    # Displays every run below each other. Entities are scaled to be between two integer values
+    # x = time
+    # y = floating points - aa.bb - describe: aa = the runID, bb = the floating point representation of the entity id
+    RUN_SCALED = 3
+
+
 def test_gen_fig_scatter(
-        data: ChunkList | Chunk,  # data to plot
+        data: list[ChunkList] | ChunkList | list[Chunk] | Chunk,  # data to plot
         show_start: bool = True,  # shows start timestamps if true
         show_end: bool = True,  # shows end timestamps if true
-        show_real_mean: bool = False  # vertical lines for mean of each idx of each chunk (using real data, not only the displayed points)
+        show_real_mean: bool = False,  # vertical lines for mean of each idx of each chunk (using real data, not only the displayed points)
+        show_real_duration = True,  # shows a box, displaying area in time and entity space, where the datapoints are found (using real data, not only the displayed points)
+        display_style: DisplayStyle = DisplayStyle.CLASSIC
 ):
+    if type(data) is list:
+        data = ChunkList(list(flatten(data)))
     if type(data) is not ChunkList:
         data = ChunkList([data])
 
     fig = go.Figure()
 
-    index = 0
+    indexes = {}
+    new_index = 0
+    color_id = 0
     for frame in data:
+        index = 0
+        first_occ = True
+        if frame.td.name in indexes.keys():
+            index = indexes[frame.td.name]
+            first_occ = False
+        else:
+            indexes[frame.td.name] = new_index
+            index = new_index
+            index += 1
+
         fd = frame.get_data()
 
         if show_start:
-            desc = fd[fd["is_start"]].apply(_gen_full_hover_text, axis=1)
-            fig.add_scattergl(x=fd[fd['is_start']]['start'], y=fd[fd['is_start']]['p'], name=f"{frame.td.name}: start", mode='markers',
-                            marker=dict(color=_colors[index]), hovertext=desc)
-            if show_real_mean:
+            fds = fd[fd["is_start"]].copy()
+            desc = fds.apply(_gen_full_hover_text, axis=1) #todo improve
+            fig.add_scattergl(x=fds['start'], y=fds['p'], name=f"{frame.td.name}: start", mode='markers', marker=dict(color=_colors[color_id]), hovertext=desc)
+            if first_occ and show_real_mean:
                 for i, x in frame.get_mean_times_by_idx().iterrows():
-                    fig.add_vline(x['m_start'], line_color=_colors[index])
-            index += 1
+                    fig.add_vline(x['m_start'], line_color=_colors[color_id])
+            if first_occ and show_real_duration:
+                max_vals = frame.get_max_times_by_idx().reset_index()
+                min_vals = frame.get_min_times_by_idx().reset_index()
+                for i, min_row in min_vals.iterrows():
+                    max_point = max_vals.loc[max_vals["idx"] == min_row["idx"], "m_start"].values[0]
+                    fig.add_vrect(x0=min_row['m_start'], x1=max_point, fillcolor=_colors[color_id], opacity=0.25, layer="below", line_width=0)
+            color_id += 1
         if show_end:
             desc = fd[fd["is_start"] == False].apply(_gen_full_hover_text, axis=1)
-            fig.add_scattergl(x=fd[fd['is_start'] == False]['end'], y=fd[fd['is_start'] == False]['p'], name=f"{frame.td.name}: end", mode='markers',
-                            marker=dict(color=_colors[index]), hovertext=desc)
+            fig.add_scattergl(x=fd[fd['is_start'] == False]['end'], y=fd[fd['is_start'] == False]['p'], name=f"{frame.td.name}: end", mode='markers', marker=dict(color=_colors[color_id]), hovertext=desc)
             if show_real_mean:
                 for i, x in frame.get_mean_times_by_idx().iterrows():
-                    fig.add_vline(x['m_end'], line_color=_colors[index])
-            index += 1
+                    fig.add_vline(x['m_end'], line_color=_colors[color_id])
+            color_id += 1
     fig.update_xaxes(title="time")
     fig.update_yaxes(title="Entity ID")
     return fig
