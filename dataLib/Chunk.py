@@ -199,8 +199,8 @@ class Chunk:
                             larger = uf[
                                 (uf["idx"] == y) & (uf[x["agg_key"]] > aggr[aggr['idx'] == y][x["agg_key"]].values[0])
                                 ][x["agg_key"]].min()
-                            median_aggr = pd.concat([median_aggr, pd.DataFrame([y, smaller], columns=median_aggr.columns)])
-                            median_aggr = pd.concat([median_aggr, pd.DataFrame([y, larger], columns=median_aggr.columns)])
+                            median_aggr = pd.concat([median_aggr, pd.DataFrame([[y, smaller]], columns=median_aggr.columns)])
+                            median_aggr = pd.concat([median_aggr, pd.DataFrame([[y, larger]], columns=median_aggr.columns)])
                         else:
                             median_aggr = pd.concat([con, median_aggr])
                             #print(median_aggr)
@@ -250,6 +250,19 @@ class ChunkList(list):
     def each_time_starts_zero_at_first_mean(self):
         for a in self:
             a.time_starts_zero_at_first_mean()
+        return self
+
+    def temp_each_filter_entities(
+            self,
+            entity_selection_list: list[int] | None = None,
+            entity_selection_lambda: Callable[[int], bool] | None = None,
+            additional_selection: Filter = Filter.NOTHING,
+            filter_start: bool = True,
+            filter_end: bool = True,
+            remove_duplicates: bool = True,
+            keep_selection_and_drop_unselected: bool = True):
+        for a in self:
+            a.filter_entities(entity_selection_list, entity_selection_lambda, additional_selection, filter_start, filter_end, remove_duplicates, keep_selection_and_drop_unselected)
         return self
 
     def __getitem__(self, index):

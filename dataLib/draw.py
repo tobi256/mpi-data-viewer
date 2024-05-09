@@ -88,7 +88,7 @@ def test_gen_fig_scatter(
                     if display_style == DisplayStyle.CLASSIC:
                         fig.add_vline(x['m_start'], line_color=_colors[color_id])
                     elif display_style == DisplayStyle.RUN_LINE:
-                        fig.add_shape(type="line", x0=x['m_start'], x1=x['m_start'], y0=float(index)-__RELATIVE_HEIGHT_OF_LINE, y1=float(index)+__RELATIVE_HEIGHT_OF_LINE, line=dict(color=_colors[color_id]))
+                        fig.add_shape(type="line", x0=x['m_start'], x1=x['m_start'], y0=index-__RELATIVE_HEIGHT_OF_LINE, y1=index+__RELATIVE_HEIGHT_OF_LINE, line=dict(color=_colors[color_id]))
             if first_occ and show_real_duration:
                 max_vals = frame.get_max_times_by_idx().reset_index()
                 min_vals = frame.get_min_times_by_idx().reset_index()
@@ -97,7 +97,7 @@ def test_gen_fig_scatter(
                     if display_style == DisplayStyle.CLASSIC:
                         fig.add_vrect(x0=min_row['m_start'], x1=max_point, fillcolor=_colors[color_id], opacity=0.25, layer="below", line_width=0)
                     elif display_style == DisplayStyle.RUN_LINE:
-                        fig.add_shape(type="rect", y0=float(index)-__RELATIVE_HEIGHT_OF_BOX, y1=float(index)+__RELATIVE_HEIGHT_OF_BOX, x0=min_row['m_start'], x1=max_point, fillcolor=_colors[color_id], opacity=0.25, layer="below", line_width=0)
+                        fig.add_shape(type="rect", y0=index-__RELATIVE_HEIGHT_OF_BOX, y1=index+__RELATIVE_HEIGHT_OF_BOX, x0=min_row['m_start'], x1=max_point, fillcolor=_colors[color_id], opacity=0.25, layer="below", line_width=0)
             color_id += 1
         # todo add show end points
     fig.update_xaxes(title="time")
