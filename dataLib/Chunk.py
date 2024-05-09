@@ -148,6 +148,7 @@ class Chunk:
             self.__filter_entities_helper(whitelist, lam_func, additional_selection, remove_duplicates,
                                           keep_selection_and_drop_unselected, False)
         m.debug("filtering done")
+        m.debug(f"final point length: {len(self.__data)}")
         return
 
     def __filter_entities_helper(self, whitelist, lam_func, additional, remove_duplicates, keep, filter_start):
@@ -199,6 +200,15 @@ class Chunk:
                 filtered = pd.concat([filtered, temp])
 
         # third: list
+        selector = uf["p"].isin(whitelist)
+        if not keep:
+            selector = ~selector
+        temp = uf[selector].copy()
+        remove = temp[["idx", "p"]]
+        temp["context"] += f"f{self.__operation_counter}:wl "
+        uf = uf.merge(remove, on=["idx", "p"], how="left", indicator=True)
+        uf = uf[uf["_merge"] == "left_only"].drop(columns="_merge")
+        filtered = pd.concat([filtered, temp])
 
         # fourth: lambda
         self.__data = filtered

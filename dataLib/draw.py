@@ -15,8 +15,12 @@ _colors.extend(px.colors.qualitative.G10)
 
 # todo refactor everything to use new get_data
 # todo add js switch to disable mean visible
-# todo add scatter "run view" or create new scatter plot for this
-# todo add background boxes for
+# todo add scatter "run view" or create new scatter plot for this; three modes:
+#    classic, full data on page, y=entity
+#    process-line, all datapoints of a run displayed on a line, y=runId
+#    process-float, all datapoints scaled in 1 unit, y=int->run & float->processes
+# todo add background boxes for area of points
+# todo add good descriptions
 
 def _gen_full_hover_text(row):
     return f"p: {row['p']}\ni: {row['idx']}\nstart: {row['start']}\nend: {row['end']}"
