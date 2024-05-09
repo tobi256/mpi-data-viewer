@@ -199,7 +199,7 @@ class Chunk:
                 #print(f"after:{len(uf)}")
                 filtered = pd.concat([filtered, temp])
 
-        # third: list
+        # second: list
         selector = uf["p"].isin(whitelist)
         if not keep:
             selector = ~selector
@@ -210,9 +210,15 @@ class Chunk:
         uf = uf[uf["_merge"] == "left_only"].drop(columns="_merge")
         filtered = pd.concat([filtered, temp])
 
-        # fourth: lambda
+        # third: lambda
+        selector = uf["p"].apply(lam_func)
+        if not keep:
+            selector = ~selector
+        temp = uf[selector].copy()
+        temp["context"] += f"f{self.__operation_counter}:func "
+        filtered = pd.concat([filtered, temp])
         self.__data = filtered
-
+        return
 
 
 class ChunkList(list):
