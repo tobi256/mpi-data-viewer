@@ -119,6 +119,15 @@ class Chunk:
         self.__reset_calcs()
         return self
 
+    # this filter may completely destroy the consistency of data, if used badly
+    def filter_column(self, column_name: str, filter_lambda: Callable[[any], bool]):
+        uf = self.get_data()
+        selector = uf[column_name].apply(filter_lambda)
+        uf = uf[selector].copy()
+        uf["context"] += f"c{self.__operation_counter}:{column_name} "
+        self.__data = uf
+        self.__operation_counter += 1
+
     # Filters the data, so only the selected datapoints will be shown. Calculations which require all data, like the
     #  mean of an idx will still be calculated over all data to avoid wrong data.
     def filter_entities(
@@ -169,6 +178,7 @@ class Chunk:
         if filter_end:
             self.__filter_entities_helper(whitelist, lam_func, additional_selection, remove_duplicates,
                                           keep_selection_and_drop_unselected, False)
+        self.__operation_counter += 1
         m.debug("filtering done")
         m.debug(f"final point length: {len(self.__data)}")
         return
@@ -273,6 +283,11 @@ class ChunkList(list):
             keep_selection_and_drop_unselected: bool = True):
         for a in self:
             a.filter_entities(entity_selection_list, entity_selection_lambda, additional_selection, filter_start, filter_end, remove_duplicates, keep_selection_and_drop_unselected)
+        return self
+
+    def each_filter_column(self, column_name: str, filter_lambda: Callable[[any], bool]):
+        for a in self:
+            a.filter_column(column_name, filter_lambda)
         return self
 
     def __getitem__(self, index):

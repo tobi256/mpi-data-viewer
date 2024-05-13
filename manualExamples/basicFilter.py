@@ -7,7 +7,7 @@ from dataLib import draw
 
 
 # set Messenger min print level (0 = debug)
-Messenger.Messenger.min_level = 0
+Messenger.Messenger.min_level = 1
 
 
 # create a Data Manager
@@ -52,6 +52,9 @@ cl.each_filter_entities(entity_selection_list=[0, 1, 2, 3, 4, 5, 6, 7],
 # draw classic scatter plot
 draw.gen_fig_scatter(cl, display_style=draw.DisplayStyle.CLASSIC).show()
 
+# apply another filter on a column
+cl.each_filter_column("p", lambda x: x < 100)
 
+draw.gen_fig_scatter(cl, display_style=draw.DisplayStyle.CLASSIC).show()
 
 
