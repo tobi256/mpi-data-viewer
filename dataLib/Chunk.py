@@ -238,7 +238,7 @@ class Chunk:
             if not keep:
                 selector = ~selector
             temp = uf[selector].copy()
-            temp["context"] += f"f{self.__operation_counter}:func "
+            temp["context"] += f"f{self.__operation_counter}:lambda "
             filtered = pd.concat([filtered, temp])
 
         self.__data = filtered

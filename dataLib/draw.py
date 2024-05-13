@@ -6,7 +6,7 @@ import plotly.express as px
 from enum import Enum
 import pandas as pd
 from dataLib.Messenger import Messenger as m
-from datetime import datetime
+from datetime import datetime, timedelta
 
 
 _colors = px.colors.qualitative.G10  # todo add bigger color pallet
@@ -15,15 +15,39 @@ _colors.extend(px.colors.qualitative.G10)
 
 # todo refactor everything to use new get_data
 # todo add js switch to disable mean visible
-# todo add scatter "run view" or create new scatter plot for this; three modes:
-#    classic, full data on page, y=entity
-#    process-line, all datapoints of a run displayed on a line, y=runId
-#    process-float, all datapoints scaled in 1 unit, y=int->run & float->processes
-# todo add background boxes for area of points
-# todo add good descriptions
 
 def _gen_full_hover_text(row):
-    return f"p: {row['p']}\ni: {row['idx']}\nstart: {row['start']}\nend: {row['end']}"
+    return (f"entity ID: <b>{row['p']}</b><br>"
+            f"oper. ID: <b>{row['idx']}</b><br>"
+            f"context: {row['context']}<br>"
+            f"{"<b>" if row["is_start"] else ""}start: {row['start']}{"</b>" if row["is_start"] else ""}<br>"
+            f"{"" if row["is_start"] else "<b>"}end: {row['end']}{"" if row["is_start"] else "</b>"}<br>"
+            f"call ID: {row['callid']}<br>"
+            f"buf_size: {row['buf_size']}<br>"
+            f"comm size: {row['comm_size']}<br>"
+            f"region: {row['region']}")
+
+def _gen_full_hover_text_is_start(row):
+    return (f"entity ID: <b>{row['p']}</b><br>"
+            f"oper. ID: <b>{row['idx']}</b><br>"
+            f"context: {row['context']}<br>"
+            f"<b>start: {row['start']}</b><br>"
+            f"end: {row['end']}<br>"
+            f"call ID: {row['callid']}<br>"
+            f"buf_size: {row['buf_size']}<br>"
+            f"comm size: {row['comm_size']}<br>"
+            f"region: {row['region']}")
+
+def _gen_full_hover_text_is_end(row):
+    return (f"entity ID: <b>{row['p']}</b><br>"
+            f"oper. ID: <b>{row['idx']}</b><br>"
+            f"context: {row['context']}<br>"
+            f"start: {row['start']}<br>"
+            f"<b>end: {row['end']}</b><br>"
+            f"call ID: {row['callid']}<br>"
+            f"buf_size: {row['buf_size']}<br>"
+            f"comm size: {row['comm_size']}<br>"
+            f"region: {row['region']}")
 
 
 class DisplayStyle(Enum):
@@ -49,7 +73,13 @@ __SPACE_BETWEEN_RUNNS = 0.1  # above and below
 __SPACE_BETWEEN_LINES = 0
 __SPACE_BETWEEN_BOXES = 0.1
 
+til = timedelta(0)
+desc_time = timedelta(0)
+scattering_time = timedelta(0)
+rest_time = timedelta(0)
+
 def __add_scatters_to_fig(fig, shapes, frame, display_style, index, color_id, first_occ, show_real_mean, show_real_duration, is_start):
+    start = datetime.now()
     se_name = "start" if is_start else "end"
     fd = frame.get_data()
     p_disp_count = frame.p_end - frame.p_start
@@ -59,10 +89,28 @@ def __add_scatters_to_fig(fig, shapes, frame, display_style, index, color_id, fi
     elif display_style == DisplayStyle.RUN_SCALED:
         fds["xaxis"] = fds["p"].apply(
             lambda s: (s / p_disp_count) * (1 - 2 * __SPACE_BETWEEN_RUNNS) + __SPACE_BETWEEN_RUNNS + index)
-    desc = fds.apply(_gen_full_hover_text, axis=1)  # todo improve
+
+    global til
+    m1 = datetime.now()
+    m.debug(f"til:{m1-start} [{til}]")
+    til += m1-start
+
+    desc = fds.apply((_gen_full_hover_text_is_start if is_start else _gen_full_hover_text_is_end), axis=1)  # todo improve performance
+
+    global desc_time
+    m2 = datetime.now()
+    m.debug(f"desc:{m2-m1} [{desc_time}]")
+    desc_time += m2-m1
+
     fig.add_scattergl(x=fds[se_name], y=(fds['p'] if display_style == DisplayStyle.CLASSIC else fds['xaxis']),
                       name=f"{frame.td.name}: {se_name}", mode='markers', marker=dict(color=_colors[color_id]),
-                      hovertext=desc)
+                      hovertext=desc, hoverinfo="text")
+
+    global scattering_time
+    m3 = datetime.now()
+    m.debug(f"scatter:{m3-m2} [{scattering_time}]")
+    scattering_time += m3-m2
+
     if first_occ and show_real_mean:
         for i, x in frame.get_mean_times_by_idx().iterrows():
             if display_style == DisplayStyle.CLASSIC:
@@ -91,6 +139,11 @@ def __add_scatters_to_fig(fig, shapes, frame, display_style, index, color_id, fi
                     yy = (index + __SPACE_BETWEEN_BOXES, index + 1 - __SPACE_BETWEEN_BOXES)
                 shapes.append(dict(type="rect", y0=yy[0], y1=yy[1], x0=min_row[f"m_{se_name}"], x1=max_point,
                               fillcolor=_colors[color_id], opacity=0.25, layer="below", line_width=0))
+
+    global rest_time
+    m4 = datetime.now()
+    m.debug(f"rest:{m4-m3} [{rest_time}]")
+    rest_time += m4-m3
 
 def gen_fig_scatter(
         data: list[ChunkList] | ChunkList | list[Chunk] | Chunk,  # data to plot
