@@ -5,6 +5,7 @@ import plotly.graph_objects as go
 import plotly.express as px
 from enum import Enum
 import pandas as pd
+from dataLib.Messenger import Messenger as m
 from datetime import datetime
 
 
@@ -48,7 +49,7 @@ __SPACE_BETWEEN_RUNNS = 0.1  # above and below
 __SPACE_BETWEEN_LINES = 0
 __SPACE_BETWEEN_BOXES = 0.1
 
-def __add_scatters_to_fig(fig, frame, display_style, index, color_id, first_occ, show_real_mean, show_real_duration, is_start):
+def __add_scatters_to_fig(fig, shapes, frame, display_style, index, color_id, first_occ, show_real_mean, show_real_duration, is_start):
     se_name = "start" if is_start else "end"
     fd = frame.get_data()
     p_disp_count = frame.p_end - frame.p_start
@@ -72,8 +73,8 @@ def __add_scatters_to_fig(fig, frame, display_style, index, color_id, first_occ,
                     yy = (index - __RELATIVE_HEIGHT_OF_LINE, index + __RELATIVE_HEIGHT_OF_LINE)
                 elif display_style == DisplayStyle.RUN_SCALED:
                     yy = (index + __SPACE_BETWEEN_LINES, index + 1 - __SPACE_BETWEEN_LINES)
-                fig.add_shape(type="line", x0=x[f"m_{se_name}"], x1=x[f"m_{se_name}"], y0=yy[0], y1=yy[1],
-                              line=dict(color=_colors[color_id]))
+                shapes.append(dict(type="line", x0=x[f"m_{se_name}"], x1=x[f"m_{se_name}"], y0=yy[0], y1=yy[1],
+                              line=dict(color=_colors[color_id])))
     if first_occ and show_real_duration:
         max_vals = frame.get_max_times_by_idx().reset_index()
         min_vals = frame.get_min_times_by_idx().reset_index()
@@ -88,16 +89,17 @@ def __add_scatters_to_fig(fig, frame, display_style, index, color_id, first_occ,
                     yy = (index - __RELATIVE_HEIGHT_OF_BOX, index + __RELATIVE_HEIGHT_OF_BOX)
                 elif display_style == DisplayStyle.RUN_SCALED:
                     yy = (index + __SPACE_BETWEEN_BOXES, index + 1 - __SPACE_BETWEEN_BOXES)
-                fig.add_shape(type="rect", y0=yy[0], y1=yy[1], x0=min_row[f"m_{se_name}"], x1=max_point,
-                              fillcolor=_colors[color_id], opacity=0.25, layer="below", line_width=0)
+                shapes.append(dict(type="rect", y0=yy[0], y1=yy[1], x0=min_row[f"m_{se_name}"], x1=max_point,
+                              fillcolor=_colors[color_id], opacity=0.25, layer="below", line_width=0))
 
-def test_gen_fig_scatter(
+def gen_fig_scatter(
         data: list[ChunkList] | ChunkList | list[Chunk] | Chunk,  # data to plot
         show_start: bool = True,  # shows start timestamps if true
         show_end: bool = True,  # shows end timestamps if true
         show_real_mean: bool = False,  # vertical lines for mean of each idx of each chunk (using real data, not only the displayed points)
-        show_real_duration: bool = True,  # shows a box, displaying area in time and entity space, where the datapoints are found (using real data, not only the displayed points)
-        display_style: DisplayStyle = DisplayStyle.CLASSIC
+        show_real_duration: bool = False,  # shows a box, displaying area in time and entity space, where the datapoints are found (using real data, not only the displayed points)
+        display_style: DisplayStyle = DisplayStyle.CLASSIC,
+        same_colors_run: bool = False
 ):
     if type(data) is list:
         data = ChunkList(list(flatten(data)))
@@ -105,8 +107,10 @@ def test_gen_fig_scatter(
         data = ChunkList([data])
 
     fig = go.Figure()
+    shapes = []
 
     indexes = {}
+    color_dict = {}
     new_index = 0
     color_id = 0
     for frame in data:
@@ -117,23 +121,30 @@ def test_gen_fig_scatter(
             first_occ = False
         else:
             indexes[frame.td.name] = new_index
+            color_dict[frame.td.name] = 0
             index = new_index
             new_index += 1
 
         if show_start:
-            __add_scatters_to_fig(fig, frame, display_style, index, color_id, first_occ, show_real_mean,
-                                  show_real_duration, True)
+            __add_scatters_to_fig(fig, shapes, frame, display_style, index,
+                                  (color_dict[frame.td.name] if same_colors_run else color_id), first_occ,
+                                  show_real_mean, show_real_duration, True)
+            color_dict[frame.td.name] += 1
             color_id += 1
 
         if show_end:
-            __add_scatters_to_fig(fig, frame, display_style, index, color_id, first_occ, show_real_mean,
-                                  show_real_duration, False)
+            __add_scatters_to_fig(fig, shapes, frame, display_style, index,
+                                  (color_dict[frame.td.name] if same_colors_run else color_id), first_occ,
+                                  show_real_mean, show_real_duration, False)
+            color_dict[frame.td.name] += 1
             color_id += 1
+        m.debug("draw: frame added")
     fig.update_xaxes(title="time")
     fig.update_yaxes(title="Entity ID")
+    fig.update_layout(shapes=shapes)
     return fig
 
-def gen_fig_scatter(
+def __old_gen_fig_scatter(
         data: ChunkList | Chunk,  # data to plot
         show_start: bool = True,  # shows start timestamps if true
         show_end: bool = True,  # shows end timestamps if true
@@ -193,7 +204,6 @@ def gen_fig_histo_rel_to_mean(
     fig.for_each_trace(lambda t: t.update(name = f"run {t.name}: {data[int(t.name)].td.name}" if show_run_not_operation
                        else f"oper. idx: {t.name}"))
     fig.update_xaxes(title="time relative to mean per idx and run")
-    fig.add_bar
     return fig
 
 

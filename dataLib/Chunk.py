@@ -42,11 +42,16 @@ class Chunk:
             self.td._deregister_locking_chunk(self)
 
     # all values calculated on basis of __data are removed
+    # needed if actual underlying data is changed (for example if start times are updated)
     def __reset_calcs(self):
         self.__mean_times_by_idx = None
         self.__max_times_by_idx = None
         self.__min_times_by_idx = None
         self.__data = None  #todo add recalculation to get data, to maintain consistency for filtered and grouped data
+
+    def reset_filters_and_groups(self):
+        self.__data = None
+        self.__operation_counter = 0
 
     def get_raw_data(self) -> pd.DataFrame:
         if self.__raw_data is not None:
@@ -141,7 +146,7 @@ class Chunk:
         """
         whitelist = None
         lam_func = None
-        if type(entity_selection_list) is list:  #todo check if these typeofs work
+        if type(entity_selection_list) is list:
             whitelist = entity_selection_list
         elif entity_selection_list is not None:
             m.warning("Invalid entity_selector_list, could not filter")
@@ -240,18 +245,24 @@ class Chunk:
         return
 
 
-class ChunkList(list):
-    def each_time_starts_zero_at_first_value(self):
-        for a in self:
-            a.time_starts_zero_at_first_value()
-        return self
 
+class ChunkList(list):
     def each_time_starts_zero_at_first_mean(self):
         for a in self:
             a.time_starts_zero_at_first_mean()
         return self
 
-    def temp_each_filter_entities(
+    def each_time_starts_zero_at_first_value(self):
+        for a in self:
+            a.time_starts_zero_at_first_value()
+        return self
+
+    def each_reset_filters_and_groups(self):
+        for a in self:
+            a.reset_filters_and_groups()
+        return self
+
+    def each_filter_entities(
             self,
             entity_selection_list: list[int] | None = None,
             entity_selection_lambda: Callable[[int], bool] | None = None,
