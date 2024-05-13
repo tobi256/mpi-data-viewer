@@ -203,7 +203,6 @@ class Chunk:
                             median_aggr = pd.concat([median_aggr, pd.DataFrame([[y, larger]], columns=median_aggr.columns)])
                         else:
                             median_aggr = pd.concat([con, median_aggr])
-                            #print(median_aggr)
                     aggr = median_aggr
                 temp = pd.merge(aggr, uf, on=["idx", x["agg_key"]])
                 if remove_duplicates:

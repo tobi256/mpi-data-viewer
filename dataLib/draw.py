@@ -44,13 +44,59 @@ class DisplayStyle(Enum):
 
 __RELATIVE_HEIGHT_OF_BOX = 0.3
 __RELATIVE_HEIGHT_OF_LINE = 0.35
+__SPACE_BETWEEN_RUNNS = 0.1  # above and below
+__SPACE_BETWEEN_LINES = 0
+__SPACE_BETWEEN_BOXES = 0.1
+
+def __add_scatters_to_fig(fig, frame, display_style, index, color_id, first_occ, show_real_mean, show_real_duration, is_start):
+    se_name = "start" if is_start else "end"
+    fd = frame.get_data()
+    p_disp_count = frame.p_end - frame.p_start
+    fds = fd[(fd["is_start"] if is_start else ~fd["is_start"])].copy()
+    if display_style == DisplayStyle.RUN_LINE:
+        fds["xaxis"] = index
+    elif display_style == DisplayStyle.RUN_SCALED:
+        fds["xaxis"] = fds["p"].apply(
+            lambda s: (s / p_disp_count) * (1 - 2 * __SPACE_BETWEEN_RUNNS) + __SPACE_BETWEEN_RUNNS + index)
+    desc = fds.apply(_gen_full_hover_text, axis=1)  # todo improve
+    fig.add_scattergl(x=fds[se_name], y=(fds['p'] if display_style == DisplayStyle.CLASSIC else fds['xaxis']),
+                      name=f"{frame.td.name}: {se_name}", mode='markers', marker=dict(color=_colors[color_id]),
+                      hovertext=desc)
+    if first_occ and show_real_mean:
+        for i, x in frame.get_mean_times_by_idx().iterrows():
+            if display_style == DisplayStyle.CLASSIC:
+                fig.add_vline(x[f"m_{se_name}"], line_color=_colors[color_id])
+            else:
+                yy = (0, 0)
+                if display_style == DisplayStyle.RUN_LINE:
+                    yy = (index - __RELATIVE_HEIGHT_OF_LINE, index + __RELATIVE_HEIGHT_OF_LINE)
+                elif display_style == DisplayStyle.RUN_SCALED:
+                    yy = (index + __SPACE_BETWEEN_LINES, index + 1 - __SPACE_BETWEEN_LINES)
+                fig.add_shape(type="line", x0=x[f"m_{se_name}"], x1=x[f"m_{se_name}"], y0=yy[0], y1=yy[1],
+                              line=dict(color=_colors[color_id]))
+    if first_occ and show_real_duration:
+        max_vals = frame.get_max_times_by_idx().reset_index()
+        min_vals = frame.get_min_times_by_idx().reset_index()
+        for i, min_row in min_vals.iterrows():
+            max_point = max_vals.loc[max_vals["idx"] == min_row["idx"], f"m_{se_name}"].values[0]
+            if display_style == DisplayStyle.CLASSIC:
+                fig.add_vrect(x0=min_row[f"m_{se_name}"], x1=max_point, fillcolor=_colors[color_id], opacity=0.25,
+                              layer="below", line_width=0)
+            else:
+                yy = (0, 0)
+                if display_style == DisplayStyle.RUN_LINE:
+                    yy = (index - __RELATIVE_HEIGHT_OF_BOX, index + __RELATIVE_HEIGHT_OF_BOX)
+                elif display_style == DisplayStyle.RUN_SCALED:
+                    yy = (index + __SPACE_BETWEEN_BOXES, index + 1 - __SPACE_BETWEEN_BOXES)
+                fig.add_shape(type="rect", y0=yy[0], y1=yy[1], x0=min_row[f"m_{se_name}"], x1=max_point,
+                              fillcolor=_colors[color_id], opacity=0.25, layer="below", line_width=0)
 
 def test_gen_fig_scatter(
         data: list[ChunkList] | ChunkList | list[Chunk] | Chunk,  # data to plot
         show_start: bool = True,  # shows start timestamps if true
         show_end: bool = True,  # shows end timestamps if true
         show_real_mean: bool = False,  # vertical lines for mean of each idx of each chunk (using real data, not only the displayed points)
-        show_real_duration = True,  # shows a box, displaying area in time and entity space, where the datapoints are found (using real data, not only the displayed points)
+        show_real_duration: bool = True,  # shows a box, displaying area in time and entity space, where the datapoints are found (using real data, not only the displayed points)
         display_style: DisplayStyle = DisplayStyle.CLASSIC
 ):
     if type(data) is list:
@@ -74,32 +120,15 @@ def test_gen_fig_scatter(
             index = new_index
             new_index += 1
 
-        fd = frame.get_data()
-        p_disp_count = frame.p_end - frame.p_start
-
         if show_start:
-            fds = fd[fd["is_start"]].copy()
-            if display_style == DisplayStyle.RUN_LINE:
-                fds["xaxis"] = index
-            desc = fds.apply(_gen_full_hover_text, axis=1) #todo improve
-            fig.add_scattergl(x=fds['start'], y=(fds['p'] if display_style == DisplayStyle.CLASSIC else fds['xaxis']), name=f"{frame.td.name}: start", mode='markers', marker=dict(color=_colors[color_id]), hovertext=desc)
-            if first_occ and show_real_mean:
-                for i, x in frame.get_mean_times_by_idx().iterrows():
-                    if display_style == DisplayStyle.CLASSIC:
-                        fig.add_vline(x['m_start'], line_color=_colors[color_id])
-                    elif display_style == DisplayStyle.RUN_LINE:
-                        fig.add_shape(type="line", x0=x['m_start'], x1=x['m_start'], y0=index-__RELATIVE_HEIGHT_OF_LINE, y1=index+__RELATIVE_HEIGHT_OF_LINE, line=dict(color=_colors[color_id]))
-            if first_occ and show_real_duration:
-                max_vals = frame.get_max_times_by_idx().reset_index()
-                min_vals = frame.get_min_times_by_idx().reset_index()
-                for i, min_row in min_vals.iterrows():
-                    max_point = max_vals.loc[max_vals["idx"] == min_row["idx"], "m_start"].values[0]
-                    if display_style == DisplayStyle.CLASSIC:
-                        fig.add_vrect(x0=min_row['m_start'], x1=max_point, fillcolor=_colors[color_id], opacity=0.25, layer="below", line_width=0)
-                    elif display_style == DisplayStyle.RUN_LINE:
-                        fig.add_shape(type="rect", y0=index-__RELATIVE_HEIGHT_OF_BOX, y1=index+__RELATIVE_HEIGHT_OF_BOX, x0=min_row['m_start'], x1=max_point, fillcolor=_colors[color_id], opacity=0.25, layer="below", line_width=0)
+            __add_scatters_to_fig(fig, frame, display_style, index, color_id, first_occ, show_real_mean,
+                                  show_real_duration, True)
             color_id += 1
-        # todo add show end points
+
+        if show_end:
+            __add_scatters_to_fig(fig, frame, display_style, index, color_id, first_occ, show_real_mean,
+                                  show_real_duration, False)
+            color_id += 1
     fig.update_xaxes(title="time")
     fig.update_yaxes(title="Entity ID")
     return fig
