@@ -6,6 +6,7 @@ from enum import Flag
 from typing import Callable
 import pandas as pd
 from types import FunctionType
+from typing import Self
 
 pd.set_option('display.expand_frame_repr', False)
 
@@ -51,6 +52,7 @@ class Chunk:
         c.__operation_counter = self.__operation_counter
         if self.__data is not None:
             c.__data = self.__data
+        return c
 
     # all values calculated on basis of __data are removed
     # needed if actual underlying data is changed (for example if start times are updated)
@@ -318,7 +320,7 @@ class Chunk:
 
 
 class ChunkList(list):
-    def copy(self):
+    def copy(self) -> Self:
         c = ChunkList([])
         for a in self:
             c.append(a.copy())

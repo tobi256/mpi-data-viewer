@@ -21,9 +21,21 @@ cl = db.create_chunks()
 
 # update the data, so the first timestamp of each run starts at 0
 cl.each_time_starts_zero_at_first_value()
-draw.gen_fig_scatter(cl, display_style=draw.DisplayStyle.RUN_SCALED).show()
-cl.each_group_entities(lambda_selector=lambda x: x % 7)
-draw.gen_fig_scatter(cl, display_style=draw.DisplayStyle.RUN_SCALED).show()
-cl.each_reset_filters_and_groups()
-cl.each_group_entities(linear_size=128)
-draw.gen_fig_scatter(cl, display_style=draw.DisplayStyle.RUN_SCALED).show()
+
+# create a copy of the ChunkList and filter the min, max and median values
+min_max_median = cl.copy()
+min_max_median.each_filter_entities(additional_selection=Chunk.Filter.MIN_MAX_MED)
+
+# create a copy of the ChunkList and group them by their nodes
+node_groups = cl.copy()
+node_groups.each_group_entities(show_group_at="min")
+
+# draw scatter graph with all data
+draw.gen_fig_scatter(
+    [node_groups, min_max_median],
+    display_style=draw.DisplayStyle.RUN_SCALED,
+    show_real_mean=True,
+    show_real_duration=True,
+    same_colors_run=True
+).show()
+
