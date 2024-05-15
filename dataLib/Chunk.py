@@ -7,6 +7,8 @@ from typing import Callable
 import pandas as pd
 from types import FunctionType
 
+pd.set_option('display.expand_frame_repr', False)
+
 
 # If there is no singular Median, two points will be selected.
 # note: using first and last in combination with other parameters may lead to errors.
@@ -47,7 +49,9 @@ class Chunk:
         self.__mean_times_by_idx = None
         self.__max_times_by_idx = None
         self.__min_times_by_idx = None
-        self.__data = None  #todo add recalculation to get data, to maintain consistency for filtered and grouped data
+        if self.__data is not None:
+            m.warning("Filters and groups are reset. ")
+            self.reset_filters_and_groups()
 
     def reset_filters_and_groups(self):
         self.__data = None
@@ -127,6 +131,55 @@ class Chunk:
         uf["context"] += f"c{self.__operation_counter}:{column_name} "
         self.__data = uf
         self.__operation_counter += 1
+
+    def group_entities(
+            self,
+            linear_size: int | None = None,  # starts to group the chunk into linear_size big groups starting at small, use 0 to automatically select the ppn number
+            lambda_selector: Callable[[int], int] | None = None,  # lambda function receives entity id, returns group id
+            aggr_start_end: Callable = "mean",  # min, max, mean, median
+            show_group_at: str = "min"  # min, max, median: which p of the group shall be used
+    ):
+        if linear_size is not None and lambda_selector is not None:
+            m.error("Only linear_size parameter or lambda_selector are possible simultaneously.")
+            return
+
+        if linear_size == 0 or linear_size is None and lambda_selector is None:
+            linear_size = self.td.ppn_n
+
+        if linear_size is not None:
+            lambda_selector = (lambda x: x // linear_size)
+
+        d = self.get_data()
+        temp = d.copy()
+
+        # Apply grouping ids to temp col
+        temp["group"] = temp["p"].apply(lambda_selector)
+        temp["counter"] = 1
+        temp = temp.groupby(["idx", "group", "is_start"]).agg(
+            {"start": aggr_start_end,
+             "end": aggr_start_end,
+             "p": show_group_at,
+             "counter": "count",
+             "buf_size": "unique",
+             "callid": "unique",
+             "comm_size": "unique",
+             "region": "unique"
+             }).reset_index()
+        temp = pd.merge(temp, d, on=["idx", "p", "is_start"], suffixes=(None, "_r"), validate="1:1")
+        if len(temp["counter"].unique()) != 1:
+            m.warning("Note that the grouping function created groups of different sizes!")
+        temp["context"] += temp["counter"].apply(lambda x: f"g{self.__operation_counter}:c{x}")
+        # Check if all datapoints have groupable values
+        lam_check_unique_array_val = lambda x: (x[0] if len(x) == 1 else None)
+        temp["buf_size"] = temp["buf_size"].apply(lam_check_unique_array_val)
+        temp["callid"] = temp["callid"].apply(lam_check_unique_array_val)
+        temp["comm_size"] = temp["comm_size"].apply(lam_check_unique_array_val)
+        temp["region"] = temp["region"].apply(lam_check_unique_array_val)
+        if temp[["buf_size", "callid", "comm_size", "region"]].isnull().values.any():
+            m.warning("Note that data was grouped where buf_size, callid, comm_size or region columns had different values. (affected values now NaN)")
+
+        temp = temp.drop(["start_r", "end_r", "buf_size_r", "callid_r", "comm_size_r", "region_r", "counter"], axis=1)
+        self.__data = temp
 
     # Filters the data, so only the selected datapoints will be shown. Calculations which require all data, like the
     #  mean of an idx will still be calculated over all data to avoid wrong data.
@@ -283,6 +336,17 @@ class ChunkList(list):
             keep_selection_and_drop_unselected: bool = True):
         for a in self:
             a.filter_entities(entity_selection_list, entity_selection_lambda, additional_selection, filter_start, filter_end, remove_duplicates, keep_selection_and_drop_unselected)
+        return self
+
+    def each_group_entities(
+            self,
+            linear_size: int | None = None,  # starts to group the chunk into linear_size big groups starting at small, use 0 to automatically select the ppn number
+            lambda_selector: Callable[[int], int] | None = None,  # lambda function receives entity id, returns group id
+            aggr_start_end: Callable = "mean",  # min, max, mean, median
+            show_group_at: str = "min"  # min, max, median: which p of the group shall be used
+    ):
+        for a in self:
+            a.group_entities(linear_size, lambda_selector, aggr_start_end, show_group_at)
         return self
 
     def each_filter_column(self, column_name: str, filter_lambda: Callable[[any], bool]):

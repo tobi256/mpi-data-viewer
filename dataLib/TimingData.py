@@ -3,6 +3,7 @@ from typing import IO
 from dataLib.Messenger import Messenger as m
 import pandas as pd
 
+# todo add search functionality, zb get n slowest transactions
 
 # TimingData stores the data of one Timing Log.
 # It may drop the data momentarily, but can fetch it again
@@ -46,6 +47,7 @@ class TimingData:
             m.debug(f"TimingData {self.name} drop-registry count decreased: {len(self.drop_lock_registry)}")
 
     # both ends here are inclusive for idx and p. (p[0,0] -> only p = 0, idx[1,3] -> idx = 1,2,3)
+    # todo extend by idx list
     def create_chunk(self, idx_start: int = 0, idx_end: int | None = None, p_start: int = 0, p_end: int | None = None, standalone: bool = False):
         if idx_end is None:
             idx_end = self.timestamps_n - 1
