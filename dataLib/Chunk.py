@@ -43,6 +43,15 @@ class Chunk:
         if self.__raw_data is None:
             self.td._deregister_locking_chunk(self)
 
+    # implies standalone
+    def copy(self):
+        self.make_standalone()
+        c = Chunk(self.td, self.idx_start, self.idx_end, self.p_start, self.p_end)
+        c.__raw_data = self.__raw_data.copy()
+        c.__operation_counter = self.__operation_counter
+        if self.__data is not None:
+            c.__data = self.__data
+
     # all values calculated on basis of __data are removed
     # needed if actual underlying data is changed (for example if start times are updated)
     def __reset_calcs(self):
@@ -308,8 +317,13 @@ class Chunk:
         return
 
 
-
 class ChunkList(list):
+    def copy(self):
+        c = ChunkList([])
+        for a in self:
+            c.append(a.copy())
+        return c
+
     def each_time_starts_zero_at_first_mean(self):
         for a in self:
             a.time_starts_zero_at_first_mean()
