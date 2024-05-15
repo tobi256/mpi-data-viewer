@@ -23,7 +23,6 @@ class Filter(Flag):
     MAX =       0b0000_1000  # entity with the highest value in the set
     MEDIAN =    0b0001_0000  # median of value-set, or 2 values which would be used to calculate median
     MIN_MAX_MED = MIN | MAX | MEDIAN
-    ALL =       0b1111_1111  # todo remove
 
 
 class Chunk:
@@ -39,6 +38,7 @@ class Chunk:
         self.__min_times_by_idx = None
         self.__max_times_by_idx = None
         self.__operation_counter = 0  # counts the amount of filter and group operations on the chunk
+        self.__name_extension = ""
 
     def __del__(self):
         if self.__raw_data is None:
@@ -50,6 +50,7 @@ class Chunk:
         c = Chunk(self.td, self.idx_start, self.idx_end, self.p_start, self.p_end)
         c.__raw_data = self.__raw_data.copy()
         c.__operation_counter = self.__operation_counter
+        c.__name_extension = self.__name_extension
         if self.__data is not None:
             c.__data = self.__data
         return c
@@ -67,6 +68,10 @@ class Chunk:
     def reset_filters_and_groups(self):
         self.__data = None
         self.__operation_counter = 0
+        self.__name_extension = ""
+
+    def get_name_extension(self):
+        return self.__name_extension
 
     def get_raw_data(self) -> pd.DataFrame:
         if self.__raw_data is not None:
@@ -140,6 +145,7 @@ class Chunk:
         selector = uf[column_name].apply(filter_lambda)
         uf = uf[selector].copy()
         uf["context"] += f"c{self.__operation_counter}:{column_name} "
+        self.__name_extension += f"f{self.__operation_counter}:col({column_name}) "
         self.__data = uf
         self.__operation_counter += 1
 
@@ -154,11 +160,18 @@ class Chunk:
             m.error("Only linear_size parameter or lambda_selector are possible simultaneously.")
             return
 
+        add_name = ""
         if linear_size == 0 or linear_size is None and lambda_selector is None:
             linear_size = self.td.ppn_n
+            add_name = f"g{self.__operation_counter}:node({linear_size}) "
 
         if linear_size is not None:
             lambda_selector = (lambda x: x // linear_size)
+            if add_name == "":
+                add_name = f"g{self.__operation_counter}:lin({linear_size}) "
+        else:
+            add_name = f"g{self.__operation_counter}:lambda "
+        self.__name_extension += add_name
 
         d = self.get_data()
         temp = d.copy()
@@ -176,6 +189,7 @@ class Chunk:
              "comm_size": "unique",
              "region": "unique"
              }).reset_index()
+        # todo add functionality to allow median as show_group_at, must not have value which is not a valid p
         temp = pd.merge(temp, d, on=["idx", "p", "is_start"], suffixes=(None, "_r"), validate="1:1")
         if len(temp["counter"].unique()) != 1:
             m.warning("Note that the grouping function created groups of different sizes!")
@@ -191,6 +205,7 @@ class Chunk:
 
         temp = temp.drop(["start_r", "end_r", "buf_size_r", "callid_r", "comm_size_r", "region_r", "counter"], axis=1)
         self.__data = temp
+        self.__operation_counter += 1
 
     # Filters the data, so only the selected datapoints will be shown. Calculations which require all data, like the
     #  mean of an idx will still be calculated over all data to avoid wrong data.
@@ -236,6 +251,7 @@ class Chunk:
             m.info("Nothing to filter")
             return
 
+        self.__name_extension += f"f{self.__operation_counter}:entity "
         if filter_start:
             self.__filter_entities_helper(whitelist, lam_func, additional_selection, remove_duplicates,
                                           keep_selection_and_drop_unselected, True)

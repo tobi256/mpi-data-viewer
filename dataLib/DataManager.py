@@ -41,7 +41,6 @@ class DataManager:
         if names is None:
             names = self.timings.keys()
 
-        # todo add warnings, if data does not match
         res = ChunkList([])
         for x in names:
             res.append(self.timings[x].create_chunk(idx_start, idx_end, p_start, p_end, standalone))

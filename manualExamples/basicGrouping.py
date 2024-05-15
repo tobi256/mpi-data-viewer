@@ -28,7 +28,7 @@ min_max_median.each_filter_entities(additional_selection=Chunk.Filter.MIN_MAX_ME
 
 # create a copy of the ChunkList and group them by their nodes
 node_groups = cl.copy()
-node_groups.each_group_entities(show_group_at="min")
+node_groups.each_group_entities()
 
 # draw scatter graph with all data
 draw.gen_fig_scatter(

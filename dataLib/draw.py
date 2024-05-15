@@ -103,7 +103,7 @@ def __add_scatters_to_fig(fig, shapes, frame, display_style, index, color_id, fi
     desc_time += m2-m1
 
     fig.add_scattergl(x=fds[se_name], y=(fds['p'] if display_style == DisplayStyle.CLASSIC else fds['xaxis']),
-                      name=f"{frame.td.name}: {se_name}", mode='markers', marker=dict(color=_colors[color_id]),
+                      name=f"{frame.td.name} {frame.get_name_extension()} [{se_name}]", mode='markers', marker=dict(color=_colors[color_id]),
                       hovertext=desc, hoverinfo="text")
 
     global scattering_time
