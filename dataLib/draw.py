@@ -242,8 +242,6 @@ def gen_fig_scatter(
             yref="paper",
             align="left")
     fig.update_layout(shapes=shapes)
-    fig.show()
-
     return fig
 
 def __old_gen_fig_scatter(

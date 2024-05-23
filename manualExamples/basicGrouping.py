@@ -39,3 +39,12 @@ draw.gen_fig_scatter(
     same_colors_run=True
 ).show()
 
+# apply a row filter, select all values where the difference of the start and end is bigger than n
+n = 0.00008
+node_groups.each_filter_rows(lambda row: (row["end"] - row["start"]) > n)
+draw.gen_fig_scatter(
+    node_groups,
+    display_style=draw.DisplayStyle.RUN_SCALED,
+    same_colors_run=True
+).show()
+

@@ -140,12 +140,23 @@ class Chunk:
         return self
 
     # this filter may completely destroy the consistency of data, if used badly
+    # function expects lambda which gets the value of the selected column and returns a boolean
     def filter_column(self, column_name: str, filter_lambda: Callable[[any], bool]):
         uf = self.get_data()
         selector = uf[column_name].apply(filter_lambda)
         uf = uf[selector].copy()
-        uf["context"] += f"c{self.__operation_counter}:{column_name} "
-        self.__name_extension += f"f{self.__operation_counter}:col({column_name}) "
+        uf["context"] += f"cf{self.__operation_counter}:{column_name} "
+        self.__name_extension += f"cf{self.__operation_counter}:col({column_name}) "
+        self.__data = uf
+        self.__operation_counter += 1
+
+    # function expects lambda which gets the rows of the dataframe and returns a boolean
+    def filter_rows(self, filter_lambda: Callable[[dict], bool]):
+        uf = self.get_data()
+        selector = uf.apply(filter_lambda, axis=1)
+        uf = uf[selector].copy()
+        uf["context"] += f"rf{self.__operation_counter} "
+        self.__name_extension += f"rf{self.__operation_counter} "
         self.__data = uf
         self.__operation_counter += 1
 
@@ -251,7 +262,7 @@ class Chunk:
             m.info("Nothing to filter")
             return
 
-        self.__name_extension += f"f{self.__operation_counter}:entity "
+        self.__name_extension += f"ef{self.__operation_counter}:entity "
         if filter_start:
             self.__filter_entities_helper(whitelist, lam_func, additional_selection, remove_duplicates,
                                           keep_selection_and_drop_unselected, True)
@@ -303,7 +314,7 @@ class Chunk:
                 if remove_duplicates:
                     temp = temp.drop_duplicates(subset=["idx", x["agg_key"]])
                 remove = temp[["idx", "p"]]
-                temp["context"] += f"f{self.__operation_counter}:{x['filter_name']} "
+                temp["context"] += f"ef{self.__operation_counter}:{x['filter_name']} "
                 #print(f"before:{len(uf)}")
                 uf = uf.merge(remove, on=["idx", "p"], how="left", indicator=True)
                 uf = uf[uf["_merge"] == "left_only"].drop(columns="_merge")
@@ -328,7 +339,7 @@ class Chunk:
             if not keep:
                 selector = ~selector
             temp = uf[selector].copy()
-            temp["context"] += f"f{self.__operation_counter}:lambda "
+            temp["context"] += f"ef{self.__operation_counter}:lambda "
             filtered = pd.concat([filtered, temp])
 
         self.__data = filtered
@@ -384,6 +395,11 @@ class ChunkList(list):
     def each_filter_column(self, column_name: str, filter_lambda: Callable[[any], bool]):
         for a in self:
             a.filter_column(column_name, filter_lambda)
+        return self
+
+    def each_filter_rows(self, filter_lambda: Callable[[any], bool]):
+        for a in self:
+            a.filter_rows(filter_lambda)
         return self
 
     def __getitem__(self, index):

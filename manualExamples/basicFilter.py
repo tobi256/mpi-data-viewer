@@ -21,7 +21,7 @@ cl = db.create_chunks()
 
 # update the data, so the first timestamp of each run starts at 0
 cl.each_time_starts_zero_at_first_value()
-cl[0].get_data()
+
 # draw all runs below each other, showing all datapoints
 draw.gen_fig_scatter(cl,
                      display_style=draw.DisplayStyle.RUN_SCALED,
