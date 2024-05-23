@@ -130,7 +130,7 @@ def __add_scatters_to_fig(fig, shapes, frame, display_style, index, color_id, fi
             max_point = max_vals.loc[max_vals["idx"] == min_row["idx"], f"m_{se_name}"].values[0]
             if display_style == DisplayStyle.CLASSIC:
                 fig.add_vrect(x0=min_row[f"m_{se_name}"], x1=max_point, fillcolor=_colors[color_id], opacity=0.25,
-                              layer="below", line_width=0)
+                              layer="below", line_width=0, line=dict(width=0))
             else:
                 yy = (0, 0)
                 if display_style == DisplayStyle.RUN_LINE:
@@ -138,7 +138,7 @@ def __add_scatters_to_fig(fig, shapes, frame, display_style, index, color_id, fi
                 elif display_style == DisplayStyle.RUN_SCALED:
                     yy = (index + __SPACE_BETWEEN_BOXES, index + 1 - __SPACE_BETWEEN_BOXES)
                 shapes.append(dict(type="rect", y0=yy[0], y1=yy[1], x0=min_row[f"m_{se_name}"], x1=max_point,
-                              fillcolor=_colors[color_id], opacity=0.25, layer="below", line_width=0))
+                              fillcolor=_colors[color_id], opacity=0.25, layer="below", line_width=0, line=dict(width=0)))
 
     global rest_time
     m4 = datetime.now()
@@ -177,6 +177,15 @@ def gen_fig_scatter(
             color_dict[frame.td.name] = 0
             index = new_index
             new_index += 1
+            if display_style == DisplayStyle.RUN_LINE or display_style == DisplayStyle.RUN_SCALED:
+                fig.add_annotation(
+                    x=0,
+                    y=(index if display_style == DisplayStyle.RUN_LINE else index+0.5),
+                    text=f"{frame.td.name} ",
+                    showarrow=False,
+                    font=dict(size=20),
+                    xanchor="right",
+                    hovertext=f"file: {frame.td.file_path}")
 
         if show_start:
             __add_scatters_to_fig(fig, shapes, frame, display_style, index,
@@ -193,8 +202,48 @@ def gen_fig_scatter(
             color_id += 1
         m.debug("draw: frame added")
     fig.update_xaxes(title="time")
-    fig.update_yaxes(title="Entity ID")
+    if display_style == DisplayStyle.CLASSIC:
+        fig.update_yaxes(title="Entity ID")
+    elif display_style == DisplayStyle.RUN_LINE or display_style == DisplayStyle.RUN_SCALED:
+        fig.update_yaxes(title="Runs", showticklabels=False)
+    if show_real_mean or show_real_duration:
+        fig.update_layout(
+            updatemenus=[
+                dict(
+                    type="buttons",
+                    direction="left",
+                    buttons=list([
+                        dict(
+                            args=[{"shapes": []}],
+                            label="Hide",
+                            method="relayout"
+                        ),
+                        dict(
+                            args=[{"shapes": shapes}],
+                            label="Show",
+                            method="relayout"
+                        )
+                    ]),
+                    pad={"r": 10, "t": 10},
+                    showactive=True,
+                    x=0.11,
+                    xanchor="left",
+                    y=1.1,
+                    yanchor="top"
+                ),
+            ]
+        )
+        fig.add_annotation(
+            x=0,
+            y=1.08,
+            text=f"Real mean and boxes: ",
+            showarrow=False,
+            font=dict(size=12),
+            yref="paper",
+            align="left")
     fig.update_layout(shapes=shapes)
+    fig.show()
+
     return fig
 
 def __old_gen_fig_scatter(
