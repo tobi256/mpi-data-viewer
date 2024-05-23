@@ -97,6 +97,12 @@ class Chunk:
         self.__data = pd.concat([start, end])
         return self.__data
 
+    def set_data(self, data: pd.DataFrame, operation_desc: str = "unknown"):
+        m.info("Set Data was used. Data may have inconsistencies.")
+        self.__data = data
+        self.__name_extension += f"u{self.__operation_counter}:{operation_desc}"
+        self.__operation_counter += 1
+
     def make_standalone(self):
         if self.__raw_data is None:
             self.__raw_data = self.get_raw_data().copy()
