@@ -72,7 +72,6 @@ __SPACE_BETWEEN_LINES = 0
 __SPACE_BETWEEN_BOXES = 0.1
 
 def __add_scatters_to_fig(fig, shapes, frame, display_style, index, color_id, first_occ, show_real_mean, show_real_duration, is_start):
-    start = datetime.now()
     se_name = "start" if is_start else "end"
     fd = frame.get_data()
     p_disp_count = frame.p_end - frame.p_start
