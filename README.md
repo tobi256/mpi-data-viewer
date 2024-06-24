@@ -13,21 +13,21 @@ Files can be read individually or as entire folders.
 ``` python
 db.read_timing(<path>, <name>)
 ```
-- path: path to file
-- name: a name to access data in `DataManager`
+- ***path***: path to file
+- ***name***: a name to access data in `DataManager`
 
 ``` python
 db.read_timing_folder(<folder_path>, <file_pattern>, <naming>)
 ```
-- folder_path: path to folder
-- file_pattern: (default=`timings_.*\\.dat`) regex pattern which files in the folder shall be used
-- naming: (default=`data?`) the names of the read files. The `?` will be replaced by a unique number for each read file.
+- ***folder_path***: path to folder
+- ***file_pattern***: (default=`timings_.*\\.dat`) regex pattern which files in the folder shall be used
+- ***naming***: (default=`data?`) the names of the read files. The `?` will be replaced by a unique number for each read file.
 
 The read files can be accessed through a `TimingData` instance which can be accessed through the name.
 ```python
 timingdata = db.get_timing_data(<name>)
 ```
-- name: the name specified when reading the file
+- ***name***: the name specified when reading the file
 
 It is also possible to directly create `Chunks` for every `TimingData` instance in the `DataManager` by calling `db.create_chunks(<args...>)`.
 If used, `create_chunk` is called for every `TimingData` instance with the given arguments.
@@ -44,11 +44,11 @@ Information on how to access a `TimingData` instance, look at `DataManager` docu
 ```python
 chunk = timingdata.create_chunk(<idx_start>, <idx_end>, <p_start>, <p_end>, <standalone>)
 ```
-- idx_start: (default=`0`) the first index to be included
-- idx_end: (default=`None`--> max idx) the last index to be included
-- p_start: (default=`0`) the first entity to be included
-- p_end: (default=`None`--> max p) the last entity to be included
-- standalone: (default=`False`) if True, an explicit copy is made. Depending on what the Chunk is used for, this might happen later implicitly anyways
+- ***idx_start***: (default=`0`) the first index to be included
+- ***idx_end***: (default=`None`--> max idx) the last index to be included
+- ***p_start***: (default=`0`) the first entity to be included
+- ***p_end***: (default=`None`--> max p) the last entity to be included
+- ***standalone***: (default=`False`) if True, an explicit copy is made. Depending on what the Chunk is used for, this might happen later implicitly anyways
 
 ## Chunk / ChunkList
 
@@ -108,26 +108,26 @@ chunk.(each_)filter_entities(
         remove_duplicates: bool = True,
         keep_selection_and_drop_unselected: bool = True)
 ```
-- entity_selection_list: define specific entities in a list
-- entity_selection_lambda: pass a function which gets the entities and returns a boolean which entities to keep
-- additional_selection: pass a Filter like min to be filtered. Applied to every operation individually. different operations may have different max-entities values
-- filter_start: defines if start timestamps are filtered
-- filter_end: defines if end timestamps are filtered
-- remove_duplicates: defines if all but one entity shall be removed if multiple entities are suitable for additional_selection. For example there are 3 entities with identical min timestamps, two of them would be removed.
-- keep_selection_and_drop_unselected: weather the selection should be kept or removed
+- ***entity_selection_list***: define specific entities in a list
+- ***entity_selection_lambda***: pass a function which gets the entities and returns a boolean which entities to keep
+- ***additional_selection***: pass a Filter like min to be filtered. Applied to every operation individually. different operations may have different max-entities values
+- ***filter_start***: defines if start timestamps are filtered
+- ***filter_end***: defines if end timestamps are filtered
+- ***remove_duplicates***: defines if all but one entity shall be removed if multiple entities are suitable for additional_selection. For example there are 3 entities with identical min timestamps, two of them would be removed.
+- ***keep_selection_and_drop_unselected***: weather the selection should be kept or removed
 
 Filter timestamps by column values.
 ```python
 chunk.(each_)filter_column(<column_name>, <filter_lambda>)
 ```
-- column_name: the name of the column
-- filter_lambda: a lambda function which gets the values of the selected column and returns true or false
+- ***column_name***: the name of the column
+- ***filter_lambda***: a lambda function which gets the values of the selected column and returns true or false
 
 Filter timestamps by row values.
 ```python
 chunk.(each_)filter_rows(<filter_lambda>)
 ```
-- filter_lambda: a lambda function which gets the rows of the chunk and returns true or false
+- ***filter_lambda***: a lambda function which gets the rows of the chunk and returns true or false
 
 
 ```python
@@ -138,9 +138,9 @@ chunk.(each_)group_entities(
         aggr_start_end: Callable = "mean"
 ):
 ```
-- linear_size: a number N; from first to last always N elements are grouped
-- lambda_selector: a function which gets the entity id and returnes a number of which group this entity shall be now a part of
-- aggr_start_end: defines what function shall be used to aggregate start and end timestamp values
+- ***linear_size***: a number N; from first to last always N elements are grouped
+- ***lambda_selector***: a function which gets the entity id and returnes a number of which group this entity shall be now a part of
+- ***aggr_start_end***: defines what function shall be used to aggregate start and end timestamp values
 
 ## Data Format
 
