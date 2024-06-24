@@ -1,8 +1,6 @@
 # mpi-data-viewer
 
-## Usage
-
-### DataManager
+## DataManager
 
 To read datafiles, use an instance of the `DataManager` class.
 ```python
@@ -35,7 +33,7 @@ It is also possible to directly create `Chunks` for every `TimingData` instance 
 If used, `create_chunk` is called for every `TimingData` instance with the given arguments.
 
 
-### TimingData
+## TimingData
 
 TimingData holds the actual references to files. 
 It reads the data into Dataframes and makes them available.
@@ -52,7 +50,7 @@ chunk = timingdata.create_chunk(<idx_start>, <idx_end>, <p_start>, <p_end>, <sta
 - p_end: (default=`None`--> max p) the last entity to be included
 - standalone: (default=`False`) if True, an explicit copy is made. Depending on what the Chunk is used for, this might happen later implicitly anyways
 
-### Chunk / ChunkList
+## Chunk / ChunkList
 
 Chunks hold a subset of the information of a file.
 They are created by a `TimingData` instance and are used to modify, filter, group and display the data.
@@ -83,6 +81,7 @@ Copies the Chunk(s). Copies are always standalone.
 new_chunk = chunk.copy()
 ```
 
+Filter options for `filter_entities`.
 ```python
 # If there is no singular Median, two points will be selected.
 # note: using first and last in combination with other parameters may lead to errors.
@@ -164,35 +163,7 @@ Files must contain the following columns:
 - ***buf_size***
 - ***comm_size***
 
-## dataLib
-
-### TimingData
-
-TimingData is a wrapper for an MPI timestamp log file. 
-It saves the meta information like which cores and nodes were used.
-It provides access to the whole dataset or subsets (Chunks) of it.
-It may drop the Dataframe to free memory for other data. It can be instructed to load the data again.
-
-### Chunk
-
-A chunk is a subset of the data of a TimingData object.
-It is to be used, when specific parts of the file are needed.
-It references per default the data from a TimingData object, but may be instructed to make a local copy.
-If a copy is made, it acts as standalone and the data of the TimingData may be dropped.
-If not, the Chunk is registered in the TimingData object and blocks the dropping of the data.
-The `get_data` function of the Chunk object is therefore always safe to use. 
-A Chunk object works with the data which was specified at creation. 
-If not all entities were selected, the mean will only be applied to the selected entities, which may result in
-unexpected results. To keep data-consistency, select the whole range of entities and use the filter functionality of the
-Chunk to cut down the display size. Filter and Group functionality of the Chunk change only what is displayed, but 
-use the real full dataset in the background. Keep in mind that using functions which truly change the data of the Chunk,
-like `time_starts_zero_at_first_value`, will change the underlying data and then recalculate the filters and groupings.
-
-### DataManager
-
-DataManager organizes a set of TimingData objects and enables operations over all or some of its TimingData objects.
-
-### Messenger
+## Messenger
 
 Messenger is a helper class to provide consistent messaging. 
 Set `Messenger.min_level` to a higher value to restrict the printed messages:
