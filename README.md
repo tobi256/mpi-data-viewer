@@ -132,7 +132,6 @@ chunk.(each_)filter_rows(<filter_lambda>)
 
 ```python
 chunk.(each_)group_entities(
-        self,
         linear_size: int | None = None,  
         lambda_selector: Callable[[int], int] | None = None, 
         aggr_start_end: Callable = "mean"

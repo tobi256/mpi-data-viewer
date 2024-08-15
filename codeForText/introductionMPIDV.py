@@ -21,3 +21,7 @@ chunk_list.each_filter_entities(
     entity_selection_list=[0, 1, 2, 3, 4, 5, 6, 7],
     entity_selection_lambda=lambda x: x % 8 == 0,
     additional_selection=Chunk.Filter.MIN | Chunk.Filter.MAX)
+
+# Listing 3.5
+single_chunk.group_entities(lambda_selector=lambda x: x % 2)
+chunk_list.each_group_entities()
