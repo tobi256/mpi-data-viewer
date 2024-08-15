@@ -125,7 +125,8 @@ def gen_fig_scatter(
         show_real_mean: bool = False,  # vertical lines for mean of each idx of each chunk (using real data, not only the displayed points)
         show_real_duration: bool = False,  # shows a box, displaying area in time and entity space, where the datapoints are found (using real data, not only the displayed points)
         display_style: DisplayStyle = DisplayStyle.CLASSIC,
-        same_colors_run: bool = False
+        same_colors_run: bool = False,
+        hide_menu: bool = False
 ):
     if type(data) is list:
         data = ChunkList(list(flatten(data)))
@@ -174,12 +175,12 @@ def gen_fig_scatter(
             color_dict[frame.td.name] += 1
             color_id += 1
         m.debug("draw: frame added")
-    fig.update_xaxes(title="time")
+    fig.update_xaxes(title="Time")
     if display_style == DisplayStyle.CLASSIC:
-        fig.update_yaxes(title="Entity ID")
+        fig.update_yaxes(title="Process ID")
     elif display_style == DisplayStyle.RUN_LINE or display_style == DisplayStyle.RUN_SCALED:
         fig.update_yaxes(title="Runs", showticklabels=False)
-    if show_real_mean or show_real_duration:
+    if not hide_menu and (show_real_mean or show_real_duration):
         fig.update_layout(
             updatemenus=[
                 dict(

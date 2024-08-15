@@ -25,3 +25,4 @@ chunk_list.each_filter_entities(
 # Listing 3.5
 single_chunk.group_entities(lambda_selector=lambda x: x % 2)
 chunk_list.each_group_entities()
+

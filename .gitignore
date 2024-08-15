@@ -7,3 +7,6 @@
 
 #mac
 **/.DS_Store
+
+#generated files
+codeForText/output
