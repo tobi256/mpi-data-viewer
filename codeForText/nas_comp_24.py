@@ -70,13 +70,13 @@ three_alg_comp_min_max = draw.gen_fig_scatter(
 #three_alg_comp_min_max.show()
 
 
-alltoall1 = cl1[11].copy().filter_column('callid', filter_lambda=lambda id: id == 5, custom_name_extension="alltoall")
-alltoall2 = cl2[11].copy().filter_column('callid', filter_lambda=lambda id: id == 5, custom_name_extension="alltoall")
-alltoall3 = cl3[11].copy().filter_column('callid', filter_lambda=lambda id: id == 5, custom_name_extension="alltoall")
+alltoall1 = cl1[11].copy().filter_column('callid', filter_lambda=lambda id: id == 2, custom_name_extension="alltoall")
+alltoall2 = cl2[11].copy().filter_column('callid', filter_lambda=lambda id: id == 2, custom_name_extension="alltoall")
+alltoall3 = cl3[11].copy().filter_column('callid', filter_lambda=lambda id: id == 2, custom_name_extension="alltoall")
 
-other1 = cl1[11].copy().filter_column('callid', filter_lambda=lambda id: id != 5, custom_name_extension="other")
-other2 = cl2[11].copy().filter_column('callid', filter_lambda=lambda id: id != 5, custom_name_extension="other")
-other3 = cl3[11].copy().filter_column('callid', filter_lambda=lambda id: id != 5, custom_name_extension="other")
+other1 = cl1[11].copy().filter_column('callid', filter_lambda=lambda id: id != 2, custom_name_extension="reduce")
+other2 = cl2[11].copy().filter_column('callid', filter_lambda=lambda id: id != 2, custom_name_extension="reduce")
+other3 = cl3[11].copy().filter_column('callid', filter_lambda=lambda id: id != 2, custom_name_extension="reduce")
 
 
 three_alg_comp_scaled = draw.gen_fig_scatter(
@@ -85,18 +85,54 @@ three_alg_comp_scaled = draw.gen_fig_scatter(
     show_real_mean=True,
     show_real_duration=True,
     same_colors_run=True,
-    hide_menu=True)
-three_alg_comp_scaled.show()
+    hide_menu=True,
+    draw_for_all=True)
+#three_alg_comp_scaled.show()
 
+atabow1 = db1.get_timing_data(alltoall1.td.name).create_chunk(idx_start=31, idx_end=41, standalone=True).time_starts_zero_at_first_value().filter_column('callid', filter_lambda=lambda id: id == 2, custom_name_extension="alltoall")
+atabow2 = db2.get_timing_data(alltoall2.td.name).create_chunk(idx_start=31, idx_end=41, standalone=True).time_starts_zero_at_first_value().filter_column('callid', filter_lambda=lambda id: id == 2, custom_name_extension="alltoall")
+atabow3 = db3.get_timing_data(alltoall3.td.name).create_chunk(idx_start=31, idx_end=41, standalone=True).time_starts_zero_at_first_value().filter_column('callid', filter_lambda=lambda id: id == 2, custom_name_extension="alltoall")
+
+
+three_alg_comp_scaled_curve = draw.gen_fig_scatter(
+    data=[atabow1, atabow2, atabow3],
+    display_style=draw.DisplayStyle.RUN_SCALED,
+    show_real_mean=True,
+    show_real_duration=True,
+    same_colors_run=True,
+    hide_menu=True,
+    draw_for_all=True)
+three_alg_comp_scaled_curve.show()
 
 # REMOVE TO GENERATE
-exit(0)
+#exit(0)
 
 three_alg_comp_min_max.write_image("output/npb/three_alg_comp_min_max.pdf")
 time.sleep(2)
 
 three_alg_comp_min_max.update_layout(width=1500, height=800, margin=dict(l=10, r=10, t=10, b=10), showlegend=False)
 three_alg_comp_min_max.write_image("output/npb/three_alg_comp_min_max.pdf")
+
+three_alg_comp_scaled.update_layout(width=900, height=300, margin=dict(l=10, r=10, t=10, b=10), showlegend=True)
+three_alg_comp_scaled.write_image("output/npb/three_alg_comp_scaled.pdf")
+
+three_alg_comp_scaled.update_layout(width=3000, height=1500, margin=dict(l=10, r=10, t=10, b=10), showlegend=True)
+three_alg_comp_scaled.write_image("output/npb/three_alg_comp_scaled_large.pdf")
+
+three_alg_comp_scaled.update_xaxes(range=[5, 10])
+three_alg_comp_scaled.update_layout(width=1200, height=400, margin=dict(l=10, r=10, t=10, b=10), showlegend=False)
+three_alg_comp_scaled.write_image("output/npb/three_alg_comp_scaled_zoomed_5_10.pdf")
+
+three_alg_comp_scaled.update_layout(width=3000, height=1500, margin=dict(l=10, r=10, t=10, b=10), showlegend=True)
+three_alg_comp_scaled.write_image("output/npb/three_alg_comp_scaled_zoomed_5_10_large.pdf")
+
+three_alg_comp_scaled.update_xaxes(range=[6, 7])
+
+three_alg_comp_scaled.update_layout(width=1500, height=750, margin=dict(l=10, r=10, t=10, b=10), showlegend=False)
+three_alg_comp_scaled.write_image("output/npb/three_alg_comp_scaled_zoomed_6_7.pdf")
+
+three_alg_comp_scaled_curve.update_layout(width=1500, height=600, margin=dict(l=10, r=10, t=10, b=10), showlegend=False)
+three_alg_comp_scaled_curve.write_image("output/npb/three_alg_comp_scaled_curve.pdf")
 
 '''
 mm1.each_filter_column('callid', filter_lambda=lambda c: c==2)

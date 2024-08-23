@@ -71,7 +71,7 @@ __SPACE_BETWEEN_RUNNS = 0.1  # above and below
 __SPACE_BETWEEN_LINES = 0
 __SPACE_BETWEEN_BOXES = 0.1
 
-def __add_scatters_to_fig(fig, shapes, frame, display_style, index, color_id, first_occ, show_real_mean, show_real_duration, is_start):
+def __add_scatters_to_fig(fig, shapes, frame, display_style, index, color_id, first_occ, show_real_mean, show_real_duration, draw_for_all, is_start):
     se_name = "start" if is_start else "end"
     fd = frame.get_data()
     p_disp_count = frame.p_end - frame.p_start
@@ -88,7 +88,7 @@ def __add_scatters_to_fig(fig, shapes, frame, display_style, index, color_id, fi
                       name=f"{frame.td.name} {frame.get_name_extension()} [{se_name}]", mode='markers', marker=dict(color=_colors[color_id]),
                       hovertext=desc, hoverinfo="text")
 
-    if first_occ and show_real_mean:
+    if (draw_for_all or first_occ) and show_real_mean:
         for i, x in frame.get_mean_times_by_idx().iterrows():
             if fd['idx'].isin([i]).any():
                 if display_style == DisplayStyle.CLASSIC:
@@ -101,7 +101,7 @@ def __add_scatters_to_fig(fig, shapes, frame, display_style, index, color_id, fi
                         yy = (index + __SPACE_BETWEEN_LINES, index + 1 - __SPACE_BETWEEN_LINES)
                     shapes.append(dict(type="line", x0=x[f"m_{se_name}"], x1=x[f"m_{se_name}"], y0=yy[0], y1=yy[1],
                                   line=dict(color=_colors[color_id])))
-    if first_occ and show_real_duration:
+    if (draw_for_all or first_occ) and show_real_duration:
         max_vals = frame.get_max_times_by_idx().reset_index()
         min_vals = frame.get_min_times_by_idx().reset_index()
         for i, min_row in min_vals.iterrows():
@@ -128,7 +128,8 @@ def gen_fig_scatter(
         show_real_duration: bool = False,  # shows a box, displaying area in time and entity space, where the datapoints are found (using real data, not only the displayed points)
         display_style: DisplayStyle = DisplayStyle.CLASSIC,
         same_colors_run: bool = False,
-        hide_menu: bool = False
+        hide_menu: bool = False,
+        draw_for_all: bool = False  # draw mean and box for all traces, not only first per run
 ):
     print(data)
     if type(data) is list:
@@ -167,14 +168,14 @@ def gen_fig_scatter(
         if show_start:
             __add_scatters_to_fig(fig, shapes, frame, display_style, index,
                                   (color_dict[frame.td.name] if same_colors_run else color_id), first_occ,
-                                  show_real_mean, show_real_duration, True)
+                                  show_real_mean, show_real_duration, draw_for_all, True)
             color_dict[frame.td.name] += 1
             color_id += 1
 
         if show_end:
             __add_scatters_to_fig(fig, shapes, frame, display_style, index,
                                   (color_dict[frame.td.name] if same_colors_run else color_id), first_occ,
-                                  show_real_mean, show_real_duration, False)
+                                  show_real_mean, show_real_duration, draw_for_all, False)
             color_dict[frame.td.name] += 1
             color_id += 1
         m.debug("draw: frame added")
