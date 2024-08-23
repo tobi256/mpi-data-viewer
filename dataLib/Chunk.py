@@ -39,6 +39,9 @@ class Chunk:
         self.__max_times_by_idx = None
         self.__operation_counter = 0  # counts the amount of filter and group operations on the chunk
         self.__name_extension = ""
+        self.__min_start = None
+        self.__max_end = None
+        self.__min_max_last_op = -1
 
     def __del__(self):
         if self.__raw_data is None:
@@ -51,9 +54,18 @@ class Chunk:
         c.__raw_data = self.__raw_data.copy()
         c.__operation_counter = self.__operation_counter
         c.__name_extension = self.__name_extension
+        c.__min_start = self.__min_start
+        c.__max_end = self.__max_end
         if self.__data is not None:
             c.__data = self.__data
         return c
+
+    def get_execution_duration(self):
+        if self.__min_max_last_op != self.__operation_counter:
+            self.__min_start = self.get_data()['start'].min()
+            self.__max_end = self.get_data()['end'].max()
+            self.__min_max_last_op = self.__operation_counter
+        return self.__max_end - self.__min_start
 
     # all values calculated on basis of __data are removed
     # needed if actual underlying data is changed (for example if start times are updated)
@@ -61,6 +73,7 @@ class Chunk:
         self.__mean_times_by_idx = None
         self.__max_times_by_idx = None
         self.__min_times_by_idx = None
+        self.__min_max_last_op = -1
         if self.__data is not None:
             m.warning("Filters and groups are reset. ")
             self.reset_filters_and_groups()
@@ -69,6 +82,7 @@ class Chunk:
         self.__data = None
         self.__operation_counter = 0
         self.__name_extension = ""
+
 
     def get_name_extension(self):
         return self.__name_extension
@@ -408,11 +422,25 @@ class ChunkList(list):
             a.filter_rows(filter_lambda)
         return self
 
+    def sort_by_duration(self, *, reverse=False):
+        super().sort(key=lambda c: c.get_execution_duration(), reverse=reverse)
+        return self
+
     def __getitem__(self, index):
         if isinstance(index, slice):
             start = index.start if index.start is not None else 0
             stop = index.stop if index.stop is not None else len(self)
             step = index.step if index.step is not None else 1
+
+            # Handle negative indices for start and stop
+            if start < 0:
+                start += len(self)
+            if stop < 0:
+                stop += len(self)
+
+            # Ensure that start and stop are within the bounds
+            start = max(start, 0)
+            stop = min(stop, len(self))
 
             sliced_chunk_list = ChunkList()
             for i in range(start, stop, step):

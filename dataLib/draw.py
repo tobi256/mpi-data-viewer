@@ -90,32 +90,34 @@ def __add_scatters_to_fig(fig, shapes, frame, display_style, index, color_id, fi
 
     if first_occ and show_real_mean:
         for i, x in frame.get_mean_times_by_idx().iterrows():
-            if display_style == DisplayStyle.CLASSIC:
-                fig.add_vline(x[f"m_{se_name}"], line_color=_colors[color_id])
-            else:
-                yy = (0, 0)
-                if display_style == DisplayStyle.RUN_LINE:
-                    yy = (index - __RELATIVE_HEIGHT_OF_LINE, index + __RELATIVE_HEIGHT_OF_LINE)
-                elif display_style == DisplayStyle.RUN_SCALED:
-                    yy = (index + __SPACE_BETWEEN_LINES, index + 1 - __SPACE_BETWEEN_LINES)
-                shapes.append(dict(type="line", x0=x[f"m_{se_name}"], x1=x[f"m_{se_name}"], y0=yy[0], y1=yy[1],
-                              line=dict(color=_colors[color_id])))
+            if fd['idx'].isin([i]).any():
+                if display_style == DisplayStyle.CLASSIC:
+                    fig.add_vline(x[f"m_{se_name}"], line_color=_colors[color_id])
+                else:
+                    yy = (0, 0)
+                    if display_style == DisplayStyle.RUN_LINE:
+                        yy = (index - __RELATIVE_HEIGHT_OF_LINE, index + __RELATIVE_HEIGHT_OF_LINE)
+                    elif display_style == DisplayStyle.RUN_SCALED:
+                        yy = (index + __SPACE_BETWEEN_LINES, index + 1 - __SPACE_BETWEEN_LINES)
+                    shapes.append(dict(type="line", x0=x[f"m_{se_name}"], x1=x[f"m_{se_name}"], y0=yy[0], y1=yy[1],
+                                  line=dict(color=_colors[color_id])))
     if first_occ and show_real_duration:
         max_vals = frame.get_max_times_by_idx().reset_index()
         min_vals = frame.get_min_times_by_idx().reset_index()
         for i, min_row in min_vals.iterrows():
-            max_point = max_vals.loc[max_vals["idx"] == min_row["idx"], f"m_{se_name}"].values[0]
-            if display_style == DisplayStyle.CLASSIC:
-                fig.add_vrect(x0=min_row[f"m_{se_name}"], x1=max_point, fillcolor=_colors[color_id], opacity=0.25,
-                              layer="below", line_width=0, line=dict(width=0))
-            else:
-                yy = (0, 0)
-                if display_style == DisplayStyle.RUN_LINE:
-                    yy = (index - __RELATIVE_HEIGHT_OF_BOX, index + __RELATIVE_HEIGHT_OF_BOX)
-                elif display_style == DisplayStyle.RUN_SCALED:
-                    yy = (index + __SPACE_BETWEEN_BOXES, index + 1 - __SPACE_BETWEEN_BOXES)
-                shapes.append(dict(type="rect", y0=yy[0], y1=yy[1], x0=min_row[f"m_{se_name}"], x1=max_point,
-                              fillcolor=_colors[color_id], opacity=0.25, layer="below", line_width=0, line=dict(width=0)))
+            if fd['idx'].isin([min_row['idx']]).any():
+                max_point = max_vals.loc[max_vals["idx"] == min_row["idx"], f"m_{se_name}"].values[0]
+                if display_style == DisplayStyle.CLASSIC:
+                    fig.add_vrect(x0=min_row[f"m_{se_name}"], x1=max_point, fillcolor=_colors[color_id], opacity=0.25,
+                                  layer="below", line_width=0, line=dict(width=0))
+                else:
+                    yy = (0, 0)
+                    if display_style == DisplayStyle.RUN_LINE:
+                        yy = (index - __RELATIVE_HEIGHT_OF_BOX, index + __RELATIVE_HEIGHT_OF_BOX)
+                    elif display_style == DisplayStyle.RUN_SCALED:
+                        yy = (index + __SPACE_BETWEEN_BOXES, index + 1 - __SPACE_BETWEEN_BOXES)
+                    shapes.append(dict(type="rect", y0=yy[0], y1=yy[1], x0=min_row[f"m_{se_name}"], x1=max_point,
+                                  fillcolor=_colors[color_id], opacity=0.25, layer="below", line_width=0, line=dict(width=0)))
 
 
 def gen_fig_scatter(
