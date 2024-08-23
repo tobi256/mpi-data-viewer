@@ -50,14 +50,14 @@ min_exam_line = draw.gen_fig_scatter(
     same_colors_run=True)
 
 # print once to get rid of bug; info box bottom left corner
-min_exam_classic.write_image("output/min_example_classic.pdf")
+min_exam_classic.write_image("output/min_example/min_example_classic.pdf")
 time.sleep(2)
 
 min_exam_classic.update_layout(width=1000, height=600, margin=dict(l=10, r=10, t=10, b=10))
-min_exam_classic.write_image("output/min_example_classic.pdf")
+min_exam_classic.write_image("output/min_example/min_example_classic.pdf")
 
 min_exam_line.update_layout(width=1000, height=450, margin=dict(l=10, r=10, t=10, b=10))
-min_exam_line.write_image("output/min_example_line.pdf")
+min_exam_line.write_image("output/min_example/min_example_line.pdf")
 
 min_exam_scaled.update_layout(width=1000, height=600, margin=dict(l=10, r=10, t=10, b=10))
-min_exam_scaled.write_image("output/min_example_scaled.pdf")
+min_exam_scaled.write_image("output/min_example/min_example_scaled.pdf")

@@ -161,31 +161,44 @@ class Chunk:
 
     # this filter may completely destroy the consistency of data, if used badly
     # function expects lambda which gets the value of the selected column and returns a boolean
-    def filter_column(self, column_name: str, filter_lambda: Callable[[any], bool]):
+    def filter_column(self, column_name: str, filter_lambda: Callable[[any], bool], custom_name_extension: str | None = None):
         uf = self.get_data()
         selector = uf[column_name].apply(filter_lambda)
         uf = uf[selector].copy()
-        uf["context"] += f"cf{self.__operation_counter}:{column_name} "
-        self.__name_extension += f"cf{self.__operation_counter}:col({column_name}) "
+        nameex = ""
+        if custom_name_extension == None:
+            nameex = f"cf{self.__operation_counter}:{column_name} "
+        elif custom_name_extension != "":
+            nameex = f"{custom_name_extension} "
+        uf["context"] += nameex
+        self.__name_extension += nameex
         self.__data = uf
         self.__operation_counter += 1
+        return self
 
     # function expects lambda which gets the rows of the dataframe and returns a boolean
-    def filter_rows(self, filter_lambda: Callable[[dict], bool]):
+    def filter_rows(self, filter_lambda: Callable[[dict], bool], custom_name_extension: str | None = None):
         uf = self.get_data()
         selector = uf.apply(filter_lambda, axis=1)
         uf = uf[selector].copy()
-        uf["context"] += f"rf{self.__operation_counter} "
-        self.__name_extension += f"rf{self.__operation_counter} "
+        nameex = ""
+        if custom_name_extension == None:
+            nameex = f"rf{self.__operation_counter} "
+        elif custom_name_extension != "":
+            nameex = f"{custom_name_extension} "
+        uf["context"] += nameex
+        self.__name_extension += nameex
         self.__data = uf
         self.__operation_counter += 1
+        return self
 
     def group_entities(
             self,
             linear_size: int | None = None,  # starts to group the chunk into linear_size big groups starting at small, use 0 to automatically select the ppn number
             lambda_selector: Callable[[int], int] | None = None,  # lambda function receives entity id, returns group id
             aggr_start_end: Callable = "mean",  # min, max, mean, median
-            show_group_at: str = "min"  # min, max, median: which p of the group shall be used
+            show_group_at: str = "min",  # min, max, median: which p of the group shall be used
+            custom_name_extension: str | None = None
     ):
         if linear_size is not None and lambda_selector is not None:
             m.error("Only linear_size parameter or lambda_selector are possible simultaneously.")
@@ -202,7 +215,10 @@ class Chunk:
                 add_name = f"g{self.__operation_counter}:lin({linear_size}) "
         else:
             add_name = f"g{self.__operation_counter}:lambda "
-        self.__name_extension += add_name
+        if custom_name_extension is None:
+            self.__name_extension += add_name
+        elif custom_name_extension != "":
+            self.__name_extension = f"{custom_name_extension} "
 
         d = self.get_data()
         temp = d.copy()
@@ -237,6 +253,7 @@ class Chunk:
         temp = temp.drop(["start_r", "end_r", "buf_size_r", "callid_r", "comm_size_r", "region_r", "counter"], axis=1)
         self.__data = temp
         self.__operation_counter += 1
+        return self
 
     # Filters the data, so only the selected datapoints will be shown. Calculations which require all data, like the
     #  mean of an idx will still be calculated over all data to avoid wrong data.
@@ -248,8 +265,10 @@ class Chunk:
             filter_start: bool = True,
             filter_end: bool = True,
             remove_duplicates: bool = True,
-            keep_selection_and_drop_unselected: bool = True):
+            keep_selection_and_drop_unselected: bool = True,
+            custom_name_extension: str | None = None):
         """
+        :param custom_name_extension: pass None (default) to automatically generate name, or pass custom name
         :param entity_selection_lambda: lambda function which can decide which entities shall be selected
             lambda functions receives the entity id for each entity and returns a boolean.
         :param entity_selection_list: list of entities which shall be selected.
@@ -282,7 +301,10 @@ class Chunk:
             m.info("Nothing to filter")
             return
 
-        self.__name_extension += f"ef{self.__operation_counter}:entity "
+        if custom_name_extension is None:
+            self.__name_extension += f"ef{self.__operation_counter}:entity "
+        elif custom_name_extension != "":
+            self.__name_extension += f"{custom_name_extension} "
         if filter_start:
             self.__filter_entities_helper(whitelist, lam_func, additional_selection, remove_duplicates,
                                           keep_selection_and_drop_unselected, True)
@@ -396,9 +418,10 @@ class ChunkList(list):
             filter_start: bool = True,
             filter_end: bool = True,
             remove_duplicates: bool = True,
-            keep_selection_and_drop_unselected: bool = True):
+            keep_selection_and_drop_unselected: bool = True,
+            custom_name_extension: str | None = None):
         for a in self:
-            a.filter_entities(entity_selection_list, entity_selection_lambda, additional_selection, filter_start, filter_end, remove_duplicates, keep_selection_and_drop_unselected)
+            a.filter_entities(entity_selection_list, entity_selection_lambda, additional_selection, filter_start, filter_end, remove_duplicates, keep_selection_and_drop_unselected, custom_name_extension)
         return self
 
     def each_group_entities(
@@ -406,20 +429,21 @@ class ChunkList(list):
             linear_size: int | None = None,  # starts to group the chunk into linear_size big groups starting at small, use 0 to automatically select the ppn number
             lambda_selector: Callable[[int], int] | None = None,  # lambda function receives entity id, returns group id
             aggr_start_end: Callable = "mean",  # min, max, mean, median
-            show_group_at: str = "min"  # min, max, median: which p of the group shall be used
+            show_group_at: str = "min",  # min, max, median: which p of the group shall be used
+            custom_name_extension: str | None = None
     ):
         for a in self:
-            a.group_entities(linear_size, lambda_selector, aggr_start_end, show_group_at)
+            a.group_entities(linear_size, lambda_selector, aggr_start_end, show_group_at, custom_name_extension)
         return self
 
-    def each_filter_column(self, column_name: str, filter_lambda: Callable[[any], bool]):
+    def each_filter_column(self, column_name: str, filter_lambda: Callable[[any], bool], custom_name_extension: str | None = None):
         for a in self:
-            a.filter_column(column_name, filter_lambda)
+            a.filter_column(column_name, filter_lambda, custom_name_extension)
         return self
 
-    def each_filter_rows(self, filter_lambda: Callable[[any], bool]):
+    def each_filter_rows(self, filter_lambda: Callable[[any], bool], custom_name_extension: str | None = None):
         for a in self:
-            a.filter_rows(filter_lambda)
+            a.filter_rows(filter_lambda, custom_name_extension)
         return self
 
     def sort_by_duration(self, *, reverse=False):

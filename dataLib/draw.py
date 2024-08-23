@@ -130,11 +130,12 @@ def gen_fig_scatter(
         same_colors_run: bool = False,
         hide_menu: bool = False
 ):
+    print(data)
     if type(data) is list:
         data = ChunkList(list(flatten(data)))
     if type(data) is not ChunkList:
         data = ChunkList([data])
-
+    print(data)
     fig = go.Figure()
     shapes = []
 
@@ -177,7 +178,7 @@ def gen_fig_scatter(
             color_dict[frame.td.name] += 1
             color_id += 1
         m.debug("draw: frame added")
-    fig.update_xaxes(title="Time")
+    fig.update_xaxes(title="Time (s)")
     if display_style == DisplayStyle.CLASSIC:
         fig.update_yaxes(title="Process ID")
     elif display_style == DisplayStyle.RUN_LINE or display_style == DisplayStyle.RUN_SCALED:
