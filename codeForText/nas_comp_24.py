@@ -102,7 +102,24 @@ three_alg_comp_scaled_curve = draw.gen_fig_scatter(
     same_colors_run=True,
     hide_menu=True,
     draw_for_all=True)
-three_alg_comp_scaled_curve.show()
+#three_alg_comp_scaled_curve.show()
+
+alltoall1g = alltoall1.copy().group_entities(custom_name_extension="nodes")
+alltoall2g = alltoall2.copy().group_entities(custom_name_extension="nodes")
+alltoall3g = alltoall3.copy().group_entities(custom_name_extension="nodes")
+other1g = other1.copy().group_entities(custom_name_extension="nodes")
+other2g = other2.copy().group_entities(custom_name_extension="nodes")
+other3g = other3.copy().group_entities(custom_name_extension="nodes")
+
+three_alg_comp_scaled_grouped = draw.gen_fig_scatter(
+    data=[alltoall1g, alltoall2g, alltoall3g, other1g, other2g, other3g],
+    display_style=draw.DisplayStyle.RUN_SCALED,
+    show_real_mean=True,
+    show_real_duration=True,
+    same_colors_run=True,
+    hide_menu=True,
+    draw_for_all=True)
+#three_alg_comp_scaled_grouped.show()
 
 # REMOVE TO GENERATE
 #exit(0)
@@ -116,59 +133,24 @@ three_alg_comp_min_max.write_image("output/npb/three_alg_comp_min_max.pdf")
 three_alg_comp_scaled.update_layout(width=900, height=300, margin=dict(l=10, r=10, t=10, b=10), showlegend=True)
 three_alg_comp_scaled.write_image("output/npb/three_alg_comp_scaled.pdf")
 
-three_alg_comp_scaled.update_layout(width=3000, height=1500, margin=dict(l=10, r=10, t=10, b=10), showlegend=True)
-three_alg_comp_scaled.write_image("output/npb/three_alg_comp_scaled_large.pdf")
+#three_alg_comp_scaled.update_layout(width=3000, height=1500, margin=dict(l=10, r=10, t=10, b=10), showlegend=True)
+#three_alg_comp_scaled.write_image("output/npb/three_alg_comp_scaled_large.pdf")
 
 three_alg_comp_scaled.update_xaxes(range=[5, 10])
 three_alg_comp_scaled.update_layout(width=1200, height=400, margin=dict(l=10, r=10, t=10, b=10), showlegend=False)
 three_alg_comp_scaled.write_image("output/npb/three_alg_comp_scaled_zoomed_5_10.pdf")
 
-three_alg_comp_scaled.update_layout(width=3000, height=1500, margin=dict(l=10, r=10, t=10, b=10), showlegend=True)
-three_alg_comp_scaled.write_image("output/npb/three_alg_comp_scaled_zoomed_5_10_large.pdf")
+#three_alg_comp_scaled.update_layout(width=3000, height=1500, margin=dict(l=10, r=10, t=10, b=10), showlegend=True)
+#three_alg_comp_scaled.write_image("output/npb/three_alg_comp_scaled_zoomed_5_10_large.pdf")
 
 three_alg_comp_scaled.update_xaxes(range=[6, 7])
 
 three_alg_comp_scaled.update_layout(width=1500, height=750, margin=dict(l=10, r=10, t=10, b=10), showlegend=False)
 three_alg_comp_scaled.write_image("output/npb/three_alg_comp_scaled_zoomed_6_7.pdf")
 
+three_alg_comp_scaled_grouped.update_xaxes(range=[6, 7])
+three_alg_comp_scaled_grouped.update_layout(width=1500, height=750, margin=dict(l=10, r=10, t=10, b=10), showlegend=False)
+three_alg_comp_scaled_grouped.write_image("output/npb/three_alg_comp_scaled_grouped_zoomed_6_7.pdf")
+
 three_alg_comp_scaled_curve.update_layout(width=1500, height=600, margin=dict(l=10, r=10, t=10, b=10), showlegend=False)
 three_alg_comp_scaled_curve.write_image("output/npb/three_alg_comp_scaled_curve.pdf")
-
-'''
-mm1.each_filter_column('callid', filter_lambda=lambda c: c==2)
-mm2.each_filter_column('callid', filter_lambda=lambda c: c==2)
-mm3.each_filter_column('callid', filter_lambda=lambda c: c==2)
-
-
-draw.gen_fig_scatter([ mm1[:2], mm1[11:13], mm1[-2:], mm2[:2], mm2[11:13], mm2[-2:], mm3[:2], mm3[11:13], mm3[-2:] ],
-                     display_style=draw.DisplayStyle.RUN_LINE,
-                     show_real_mean=True,
-                     show_real_duration=True,
-                     same_colors_run=True).show()
-
-
-
-# group datapoints into their nodes
-ng1 = cl1.copy().each_group_entities()
-ng2 = cl2.copy().each_group_entities()
-ng3 = cl3.copy().each_group_entities()
-
-# draw nodes and mmm values
-draw.gen_fig_scatter([ng1, mmm1],
-                     display_style=draw.DisplayStyle.RUN_SCALED,
-                     show_real_mean=True,
-                     show_real_duration=True,
-                     same_colors_run=True).show()
-
-draw.gen_fig_scatter([ng2, mmm2],
-                     display_style=draw.DisplayStyle.RUN_SCALED,
-                     show_real_mean=True,
-                     show_real_duration=True,
-                     same_colors_run=True).show()
-
-draw.gen_fig_scatter([ng3, mmm3],
-                     display_style=draw.DisplayStyle.RUN_SCALED,
-                     show_real_mean=True,
-                     show_real_duration=True,
-                     same_colors_run=True).show()
-'''

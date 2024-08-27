@@ -39,7 +39,7 @@ min_exam_scaled = draw.gen_fig_scatter(
     hide_menu=True,
     same_colors_run=True)
 
-cl.each_filter_entities(additional_selection=Chunk.Filter.MIN|Chunk.Filter.MAX)
+cl.each_filter_entities(additional_selection=Chunk.Filter.MIN|Chunk.Filter.MAX, custom_name_extension="MIN_MAX")
 
 min_exam_line = draw.gen_fig_scatter(
     data=cl,
@@ -56,7 +56,7 @@ time.sleep(2)
 min_exam_classic.update_layout(width=1000, height=600, margin=dict(l=10, r=10, t=10, b=10))
 min_exam_classic.write_image("output/min_example/min_example_classic.pdf")
 
-min_exam_line.update_layout(width=1000, height=450, margin=dict(l=10, r=10, t=10, b=10))
+min_exam_line.update_layout(width=1000, height=250, margin=dict(l=10, r=10, t=10, b=10))
 min_exam_line.write_image("output/min_example/min_example_line.pdf")
 
 min_exam_scaled.update_layout(width=1000, height=600, margin=dict(l=10, r=10, t=10, b=10))
