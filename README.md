@@ -1,4 +1,6 @@
-# mpi-data-viewer
+# MPI Data Viewer
+
+MPI Data Viewer displays tracing data and allows to visually detect different patterns in the traces.
 
 ## DataManager
 
