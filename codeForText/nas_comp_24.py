@@ -31,9 +31,24 @@ cl2 = db2.create_chunks()
 cl3 = db3.create_chunks()
 
 # update the data, so the first timestamp of each run starts at 0
-cl1.each_time_starts_zero_at_first_value().sort_by_duration()
-cl2.each_time_starts_zero_at_first_value().sort_by_duration()
-cl3.each_time_starts_zero_at_first_value().sort_by_duration()
+cl1.each_time_starts_zero_at_first_value()
+cl2.each_time_starts_zero_at_first_value()
+cl3.each_time_starts_zero_at_first_value()
+
+trd1 = [x.get_execution_duration() for x in cl1]
+trd2 = [x.get_execution_duration() for x in cl2]
+trd3 = [x.get_execution_duration() for x in cl3]
+
+print("----start----")
+for x in range(0, len(trd1)):
+    temp = f"{x}; {trd1[x]}; {trd2[x]}; {trd3[x]} "
+    print(temp.replace(".", ","))
+print("----end----")
+
+
+cl1.sort_by_duration()
+cl2.sort_by_duration()
+cl3.sort_by_duration()
 
 # generate time table
 cls = [cl1, cl2, cl3]
@@ -85,9 +100,10 @@ three_alg_comp_scaled = draw.gen_fig_scatter(
     show_real_mean=True,
     show_real_duration=True,
     same_colors_run=True,
-    hide_menu=True,
+    hide_menu=False,
     draw_for_all=True)
-#three_alg_comp_scaled.show()
+three_alg_comp_scaled.show()
+exit(0)
 
 atabow1 = db1.get_timing_data(alltoall1.td.name).create_chunk(idx_start=31, idx_end=41, standalone=True).time_starts_zero_at_first_value().filter_column('callid', filter_lambda=lambda id: id == 2, custom_name_extension="alltoall")
 atabow2 = db2.get_timing_data(alltoall2.td.name).create_chunk(idx_start=31, idx_end=41, standalone=True).time_starts_zero_at_first_value().filter_column('callid', filter_lambda=lambda id: id == 2, custom_name_extension="alltoall")
@@ -121,11 +137,27 @@ three_alg_comp_scaled_grouped = draw.gen_fig_scatter(
     draw_for_all=True)
 #three_alg_comp_scaled_grouped.show()
 
-# REMOVE TO GENERATE
-#exit(0)
+exit(0)
 
 three_alg_comp_min_max.write_image("output/npb/three_alg_comp_min_max.pdf")
 time.sleep(2)
+
+exit(0)
+# generate pics for presentation
+
+three_alg_comp_scaled.update_layout(width=1800, height=800, margin=dict(l=10, r=10, t=10, b=10), showlegend=True)
+three_alg_comp_scaled.write_image("output/pres/three_alg_comp_scaled.pdf")
+three_alg_comp_scaled.update_xaxes(range=[5, 10])
+three_alg_comp_scaled.update_layout(width=1800, height=800, margin=dict(l=10, r=10, t=10, b=10), showlegend=True)
+three_alg_comp_scaled.write_image("output/pres/three_alg_comp_scaled510.pdf")
+three_alg_comp_scaled.update_xaxes(range=[6, 7])
+three_alg_comp_scaled.update_layout(width=1800, height=800, margin=dict(l=10, r=10, t=10, b=10), showlegend=True)
+three_alg_comp_scaled.write_image("output/pres/three_alg_comp_scaled67.pdf")
+
+# REMOVE TO GENERATE
+exit(0)
+
+
 
 three_alg_comp_min_max.update_layout(width=1500, height=800, margin=dict(l=10, r=10, t=10, b=10), showlegend=False)
 three_alg_comp_min_max.write_image("output/npb/three_alg_comp_min_max.pdf")

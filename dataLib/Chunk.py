@@ -218,7 +218,7 @@ class Chunk:
         if custom_name_extension is None:
             self.__name_extension += add_name
         elif custom_name_extension != "":
-            self.__name_extension = f"{custom_name_extension} "
+            self.__name_extension += f"{custom_name_extension} "
 
         d = self.get_data()
         temp = d.copy()
@@ -240,7 +240,11 @@ class Chunk:
         temp = pd.merge(temp, d, on=["idx", "p", "is_start"], suffixes=(None, "_r"), validate="1:1")
         if len(temp["counter"].unique()) != 1:
             m.warning("Note that the grouping function created groups of different sizes!")
-        temp["context"] += temp["counter"].apply(lambda x: f"g{self.__operation_counter}:c{x}")
+        #temp["context"] += temp["counter"].apply(lambda x: f"g{self.__operation_counter}:c{x}")
+        if custom_name_extension is None:
+            temp["context"] += temp["counter"].apply(lambda x: f"g{self.__operation_counter}:c{x} ")
+        else:
+            temp["context"] += temp["counter"].apply(lambda x: f"{custom_name_extension}({x}) ")
         # Check if all datapoints have groupable values
         lam_check_unique_array_val = lambda x: (x[0] if len(x) == 1 else None)
         temp["buf_size"] = temp["buf_size"].apply(lam_check_unique_array_val)
